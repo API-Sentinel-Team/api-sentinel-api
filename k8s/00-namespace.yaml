@@ -1,0 +1,11 @@
+# Namespace for API Sentinel (API Security Engine) on wecrew.
+# Access: https://sentinel.wecrew.in/  (UI + /api proxy)
+# Images: harbor.wecrew.in/finspot/api-sentinel-{backend,frontend}:latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-sentinel
+  labels:
+    app.kubernetes.io/name: api-sentinel
+    app.kubernetes.io/part-of: api-sentinel

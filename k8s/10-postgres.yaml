@@ -1,0 +1,106 @@
+# PostgreSQL 16 for API Sentinel.
+# Credentials: Secret api-sentinel-db (POSTGRES_USER/PASSWORD/DB) — create via create-secrets.sh.
+# Storage: 10Gi PVC on local-path (default StorageClass), RWO + Recreate (single writer).
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-sentinel-postgres-data
+  namespace: api-sentinel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-sentinel-postgres
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-postgres
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: api-sentinel-postgres
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: api-sentinel-db
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-sentinel-db
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: api-sentinel-db
+                  key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            failureThreshold: 4
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: api-sentinel-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-sentinel-postgres
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-postgres
+spec:
+  selector:
+    app: api-sentinel-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

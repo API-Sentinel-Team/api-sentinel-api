@@ -1,0 +1,63 @@
+# Network policy for the queued scan worker (HARD-3).
+#
+# The worker needs outbound access to: DNS (kube-dns), the cluster Postgres/Redis
+# services (to claim runs), and HTTPS to the allowlisted scan targets. Everything
+# else is denied. Ingress to the worker is denied entirely — nothing connects to
+# a scanner.
+#
+# Prereq: a CNI enforcing NetworkPolicy (kind's default CNI does not; calico/cilium do).
+# Verify with: kubectl api-resources | grep networkpolicies
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-sentinel-scan-worker-egress
+  namespace: api-sentinel
+spec:
+  podSelector:
+    matchLabels:
+      app: api-sentinel-scan-worker
+  policyTypes:
+    - Egress
+    - Ingress
+  ingress: []  # nothing may connect to the worker
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Postgres + Redis inside the namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+    # Allowlisted scan targets over HTTPS (cluster egress path)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              # Never scan the cluster itself or link-local infrastructure
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
+      ports:
+        - protocol: TCP
+          port: 443

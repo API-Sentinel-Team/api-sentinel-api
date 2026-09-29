@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  flink-jobmanager:
+    image: flink:1.17.2-scala_2.12
+    container_name: api-sec-flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+    volumes:
+      - ../../server/modules/streaming:/opt/flink/usrlib
+
+  flink-taskmanager:
+    image: flink:1.17.2-scala_2.12
+    container_name: api-sec-flink-taskmanager
+    command: taskmanager
+    depends_on:
+      - flink-jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+    volumes:
+      - ../../server/modules/streaming:/opt/flink/usrlib

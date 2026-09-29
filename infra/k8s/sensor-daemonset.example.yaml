@@ -1,0 +1,78 @@
+# Example: Argus api-sentinel-sensor as DaemonSet (one pod per Linux node).
+# Point --ingest to your public HTTPS endpoint that terminates TLS at nginx/Ingress.
+#
+# Prerequisites:
+# - Nodes: Linux, kernel >= 5.8, privileged pods allowed
+# - Create Sensor + sensor_key in API Sentinel DB; API_KEY env = that key
+# - Replace INGEST_URL and namespace
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: api-sentinel-sensor
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: api-sentinel-sensor
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-sensor
+    spec:
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: sensor
+          image: registry.gitlab.com/saasproduct2026/argus-inc/api-sentinel-sensor:v1.0.0
+          args:
+            - --bpf
+            - /app/bpf/http_trace.bpf.o
+            - --ingest
+            - https://api.example.com/v1/events
+            - --account-id
+            - "1"
+            - --discover-libs
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-sentinel-sensor
+                  key: api-key
+            - name: RUST_LOG
+              value: "info"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: bpf
+              mountPath: /sys/fs/bpf
+            - name: cgroup
+              mountPath: /sys/fs/cgroup
+              readOnly: true
+            - name: debug
+              mountPath: /sys/kernel/debug
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: bpf
+          hostPath:
+            path: /sys/fs/bpf
+            type: Directory
+        - name: cgroup
+          hostPath:
+            path: /sys/fs/cgroup
+            type: Directory
+        - name: debug
+          hostPath:
+            path: /sys/kernel/debug
+            type: DirectoryOrCreate
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule

@@ -1,0 +1,65 @@
+# Copy to API-Sensor repo: .github/workflows/sensor-publish.yml
+# Secrets (pick one approach):
+#   - GHCR: GITHUB_TOKEN is automatic; package visibility under repo Settings → Packages
+#   - Docker Hub: DOCKERHUB_USERNAME + DOCKERHUB_TOKEN
+#   - GitLab: GITLAB_REGISTRY_USER + GITLAB_REGISTRY_PASSWORD + REGISTRY_IMAGE full path
+
+name: Build and push sensor image
+
+on:
+  push:
+    branches: [session-4-production-fixes, main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: api-sentinel-sensor
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (BPF + Rust)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang llvm linux-tools-common linux-tools-generic \
+            libbpf-dev libelf-dev zlib1g-dev pkg-config curl git \
+            ca-certificates
+          # bpftool from linux-tools matches runner kernel — fallback download if needed
+          command -v bpftool || sudo apt-get install -y linux-tools-$(uname -r) || true
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Build BPF and Rust
+        run: |
+          make
+          cp userspace/target/release/api-sec-sensor ./api-sec-sensor
+          ls -la api-sec-sensor bpf/http_trace.bpf.o
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

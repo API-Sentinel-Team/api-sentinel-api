@@ -1,0 +1,23 @@
+# Edge stack: nginx TLS termination → FastAPI (rename service `fastapi` to match your compose).
+# Usage:
+#   docker compose -f docker-compose.yml -f infra/nginx/docker-compose.edge.yml up -d
+#
+# Mount TLS certs at ./infra/nginx/ssl/ (fullchain.pem, privkey.pem).
+
+services:
+  nginx-edge:
+    image: nginx:1.27-alpine
+    container_name: api-sentinel-nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./infra/nginx/api-sentinel-production.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - fastapi
+    networks:
+      - default
+
+# Expects `fastapi` service from root docker-compose.yml on same network.

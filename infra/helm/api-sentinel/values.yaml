@@ -1,0 +1,124 @@
+replicaCount: 2
+
+scanWorker:
+  enabled: false
+  replicas: 1
+  image: ""
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "2000m"
+      memory: "3Gi"
+      ephemeral-storage: "4Gi"
+
+image:
+  repository: api-sentinel
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+
+env:
+  APP_NAME: "API Security Engine"
+  DEBUG: "false"
+  TENANT_RLS_ENABLED: "true"
+  TESTS_LIBRARY_PATH: "/app/tests-library"
+  CORS_ORIGINS_OVERRIDE: "https://app.example.com"
+  UNIFIED_PIPELINE_MODE: "shadow"
+  STARTUP_BOOTSTRAP_SCHEMA: "false"
+  STARTUP_ENABLE_DEMO_BOOTSTRAP: "false"
+  STARTUP_ENSURE_DEFAULT_PLAYBOOKS: "false"
+  STARTUP_ENABLE_ANALYTICS_PROCESSOR: "false"
+  STARTUP_ENABLE_ARCHIVER: "false"
+  # Active scan safety — fail closed in production
+  PENTEST_REQUIRE_AUTH_PROFILE_FOR_ACTIVE_SCANS: "true"
+  PENTEST_ENFORCE_TARGET_GUARD: "true"
+  PENTEST_ALLOW_PRIVATE_TARGETS: "false"
+  PENTEST_RESOLVE_TARGET_HOSTS: "true"
+  PENTEST_FAIL_CLOSED_ON_TARGET_DNS_ERROR: "true"
+  PENTEST_TARGET_ALLOWLIST: "api.example.com,*.owned-api.example.com"
+  PENTEST_SCAN_EXECUTION_MODE: "queued"
+  # Per-run Kubernetes Jobs are not implemented yet (see NORTH_STAR_PENDING ISO-2):
+  # the worker runs as the leased Deployment, so the isolation model must say so.
+  PENTEST_SCAN_WORKER_ISOLATION_MODE: "leased_external_worker"
+  PENTEST_SCAN_WORKER_IMAGE: "registry.example.com/api-sentinel/scan-worker:latest"
+  PENTEST_SCAN_WORKER_KUBERNETES_NAMESPACE: "api-sentinel"
+  PENTEST_SCAN_WORKER_KUBERNETES_SERVICE_ACCOUNT: "api-sentinel-scan-worker"
+  PENTEST_SCAN_WORKER_RESOURCE_CPU: "2000m"
+  PENTEST_SCAN_WORKER_RESOURCE_MEMORY: "3Gi"
+  PENTEST_SCAN_WORKER_RESOURCE_EPHEMERAL_STORAGE: "4Gi"
+  PENTEST_KILL_SWITCH_ENABLED: "false"
+
+secrets:
+  databaseUrl: "postgresql+asyncpg://app_user:change-me@postgres:5432/api_security"
+  redisUrl: "redis://redis:6379/0"
+  kafkaBootstrapServers: "kafka:9092"
+  jwtSecret: "replace-me-with-64-char-secret"
+  apiKey: "replace-me-with-api-key"
+  encryptionKey: "replace-me-with-fernet-key"
+
+probes:
+  readinessPath: /api/health/ready
+  livenessPath: /api/health/live
+
+migrations:
+  enabled: true
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations:
+    eks.amazonaws.com/role-arn: ""
+
+externalServices:
+  s3Bucket: "api-sentinel-archive"
+  clickhouseUrl: "http://clickhouse:8123"
+  s3Region: "us-east-1"
+  kafkaSecurityProtocol: "PLAINTEXT"
+  kafkaSaslMechanism: ""
+  kafkaSaslUsername: ""
+  kafkaSaslPassword: ""
+
+postgresql:
+  enabled: true
+  auth:
+    username: app_user
+    password: change-me
+    database: api_security
+
+redis:
+  enabled: true
+
+kafka:
+  enabled: true
+
+clickhouse:
+  enabled: false

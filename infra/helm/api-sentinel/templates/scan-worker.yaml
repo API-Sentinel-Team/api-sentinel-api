@@ -1,0 +1,67 @@
+{{- if .Values.scanWorker.enabled }}
+{{- $image := required "scanWorker.image must be a registry image pinned by sha256 digest" .Values.scanWorker.image }}
+{{- if not (regexMatch "^.+@sha256:[a-f0-9]{64}$" $image) }}
+{{- fail "scanWorker.image must be pinned by sha256 digest" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-sentinel.fullname" . }}-scan-worker
+spec:
+  replicas: {{ .Values.scanWorker.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "api-sentinel.fullname" . }}-scan-worker
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-sentinel.fullname" . }}-scan-worker
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scan-worker
+          image: {{ $image | quote }}
+          args: ["worker"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - secretRef:
+                name: {{ include "api-sentinel.fullname" . }}-secrets
+          env:
+            {{- range $key, $value := .Values.env }}
+            {{- if not (has $key (list "PENTEST_SCAN_EXECUTION_MODE" "PENTEST_SCAN_WORKER_ISOLATION_MODE" "PENTEST_SCAN_WORK_DIR")) }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+            - name: PENTEST_SCAN_EXECUTION_MODE
+              value: queued
+            - name: PENTEST_SCAN_WORKER_ISOLATION_MODE
+              value: leased_external_worker
+            - name: PENTEST_SCAN_WORK_DIR
+              value: /tmp/api-sentinel-scan
+          resources:
+            {{- toYaml .Values.scanWorker.resources | nindent 12 }}
+          volumeMounts:
+            - name: scratch
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/appuser
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: home
+          emptyDir:
+            sizeLimit: 1Gi
+{{- end }}

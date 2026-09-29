@@ -1,0 +1,120 @@
+# Ground truth for crAPI (Completely Ridiculous API) — github.com/OWASP/crAPI
+# A realistic vulnerable shop/vehicle API with roles, JWT auth, and multi-step
+# business-logic flaws — the target that exercises Phase 2 (identity modeling)
+# and Phase 3 (business-logic abuse) that VAmPI cannot.
+#
+# Paths are the LITERAL routes from crAPI's openapi-spec (verified, not inferred).
+# owasp_category must be one of tests/benchmark/corpus.py:OWASP_API_CATEGORIES.
+#
+# Run (isolated/owned env only — crAPI is deliberately insecure, multi-service):
+#   git clone https://github.com/OWASP/crAPI && cd crAPI/deploy/docker
+#   docker compose -f docker-compose.yml up -d
+#   # crAPI web on :8888, API gateway on :8080
+target_name: crAPI
+base_url: http://localhost:8080
+description: >
+  OWASP crAPI — realistic vulnerable API. Roles (user/mechanic/admin), JWT auth,
+  cross-tenant object access, and business-logic abuse (coupon/refund). Used to
+  benchmark authorization, identity, and workflow coverage beyond VAmPI.
+
+ground_truth:
+  # ── API1: BOLA (cross-user object access) ────────────────────────────────
+  - method: GET
+    path: /identity/api/v2/vehicle/{vehicleId}/location
+    owasp_category: API1_BOLA
+    severity: HIGH
+    title: BOLA on vehicle location
+    notes: >
+      A user can read another user's vehicle GPS location by changing the
+      vehicleId (GUID). Confirmable via multi-identity replay.
+
+  - method: GET
+    path: /workshop/api/mechanic/mechanic_report
+    owasp_category: API1_BOLA
+    severity: HIGH
+    title: BOLA on mechanic service reports
+    notes: >
+      The report_id query param lets a user read other users' mechanic reports.
+
+  - method: GET
+    path: /workshop/api/shop/orders/{order_id}
+    owasp_category: API1_BOLA
+    severity: HIGH
+    title: BOLA on order details
+    notes: A user can read another user's order by changing order_id.
+
+  - method: GET
+    path: /community/api/v2/community/posts/{postId}
+    owasp_category: API1_BOLA
+    severity: MEDIUM
+    title: Excessive data / cross-object community post fields
+    notes: Post responses leak other users' internal fields (email, vehicle id).
+
+  # ── API2: Broken Authentication ──────────────────────────────────────────
+  - method: POST
+    path: /identity/api/auth/v2.7/user/login-with-token
+    owasp_category: API2_BROKEN_AUTH
+    severity: HIGH
+    title: JWT validation weakness (token forgery / alg confusion)
+    notes: >
+      Login-with-token accepts improperly validated JWTs (none-alg / weak key),
+      enabling token forgery.
+
+  - method: POST
+    path: /identity/api/auth/v3/check-otp
+    owasp_category: API2_BROKEN_AUTH
+    severity: HIGH
+    title: OTP brute force on password reset (no rate limit / lockout)
+    notes: 4-digit OTP with insufficient rate limiting allows reset takeover.
+
+  # ── API3: BOPLA (mass assignment / excessive property) ───────────────────
+  - method: PUT
+    path: /workshop/api/shop/orders/{order_id}
+    owasp_category: API3_BOPLA
+    severity: HIGH
+    title: Mass assignment on order (free refund / status tamper)
+    notes: >
+      A shadow PUT lets a user edit order properties (status/quantity) to obtain
+      an unauthorized refund. State-changing — requires destructive arming.
+
+  - method: PUT
+    path: /identity/api/v2/user/videos/{video_id}
+    owasp_category: API3_BOPLA
+    severity: MEDIUM
+    title: Mass assignment on profile video (internal property)
+    notes: Client can set an internal video property not meant to be writable.
+
+  # ── API5: BFLA (function-level authorization) ────────────────────────────
+  - method: DELETE
+    path: /identity/api/v2/admin/videos/{video_id}
+    owasp_category: API5_BFLA
+    severity: HIGH
+    title: BFLA — non-admin can call admin video delete
+    notes: >
+      The admin-only delete endpoint is reachable by a normal user (function-level
+      authorization bypass). State-changing — requires destructive arming.
+
+  - method: GET
+    path: /workshop/api/management/users/all
+    owasp_category: API5_BFLA
+    severity: HIGH
+    title: BFLA — non-admin lists all users
+    notes: Management endpoint reachable without the required elevated role.
+
+  # ── API6: Sensitive Business Flow abuse ──────────────────────────────────
+  - method: POST
+    path: /workshop/api/shop/apply_coupon
+    owasp_category: API6_SENSITIVE_BUSINESS_FLOW
+    severity: HIGH
+    title: Coupon re-use / value tampering (business-logic abuse)
+    notes: >
+      A coupon can be applied repeatedly or with a tampered value, abusing the
+      purchase flow. Multi-step: create/validate coupon then apply to an order.
+
+  # ── API7: SSRF ────────────────────────────────────────────────────────────
+  - method: POST
+    path: /workshop/api/merchant/contact_mechanic
+    owasp_category: API7_SSRF
+    severity: HIGH
+    title: SSRF via contact-mechanic callback URL
+    notes: A user-controlled URL field is fetched server-side (SSRF).

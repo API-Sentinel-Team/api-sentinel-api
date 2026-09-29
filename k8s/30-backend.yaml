@@ -1,0 +1,126 @@
+# API Sentinel backend (FastAPI).
+# Image: harbor.wecrew.in/finspot/api-sentinel-backend:latest
+# Migrations: initContainer runs `alembic upgrade head` before the app starts.
+# Pull secret: harbor-finspot-pull (finspot project is private).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-sentinel-backend
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-backend
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  # Single-node kind: allow replacing the only replica (maxUnavailable:0 + surge
+  # often fails with "Too many pods" on wecrew-control-plane).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app: api-sentinel-backend
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-backend
+    spec:
+      imagePullSecrets:
+        - name: harbor-finspot-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      initContainers:
+        - name: migrate
+          image: harbor.wecrew.in/finspot/api-sentinel-backend:latest
+          imagePullPolicy: Always
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: api-sentinel-config
+            - secretRef:
+                name: api-sentinel-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+      containers:
+        - name: api
+          image: harbor.wecrew.in/finspot/api-sentinel-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: api-sentinel-config
+            - secretRef:
+                name: api-sentinel-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /app/data
+          startupProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            requests:
+              cpu: 75m          # observed idle ~3m; node is CPU-request saturated,
+                                # 2-core limit below still allows burst
+              memory: 768Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-sentinel-backend
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-backend
+spec:
+  selector:
+    app: api-sentinel-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
