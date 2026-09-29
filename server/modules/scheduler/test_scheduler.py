@@ -77,6 +77,55 @@ class TestScheduler:
         if self._scheduler and self._scheduler.running:
             self._scheduler.shutdown()
 
+    async def sync_persisted_schedules(self, db: AsyncSession | None = None) -> dict[str, int]:
+        """Reconcile APScheduler jobs with the durable schedule table.
+
+        The API may create or toggle schedules while the scheduler runs in a
+        separate process.  Re-reading the tenant-scoped rows makes scheduling
+        durable across restarts and keeps the API stateless; ``replace_existing``
+        makes this safe to call periodically.
+        """
+        if not self._scheduler:
+            return {"enabled": 0, "registered": 0, "removed": 0}
+
+        owns_session = db is None
+        session = db or AsyncSessionLocal()
+        try:
+            result = await session.execute(
+                select(TestSchedule).where(TestSchedule.enabled == True)
+            )
+            enabled = result.scalars().all()
+            enabled_ids = {str(row.id) for row in enabled}
+            registered = 0
+            for row in enabled:
+                job = self._scheduler.get_job(str(row.id))
+                expected_args = [
+                    str(row.id), list(row.template_ids or []), list(row.endpoint_ids or []),
+                    int(row.account_id), row.pentest_profile_id,
+                ]
+                expected_trigger = CronTrigger.from_crontab(str(row.cron_expression))
+                if job is not None and list(job.args) == expected_args and str(job.trigger) == str(expected_trigger):
+                    continue
+                self._register_job(
+                    str(row.id),
+                    str(row.cron_expression),
+                    list(row.template_ids or []),
+                    list(row.endpoint_ids or []),
+                    int(row.account_id),
+                    row.pentest_profile_id,
+                )
+                registered += 1
+
+            removed = 0
+            for job in list(self._scheduler.get_jobs()):
+                if str(job.id) not in enabled_ids:
+                    self._scheduler.remove_job(job.id)
+                    removed += 1
+            return {"enabled": len(enabled), "registered": registered, "removed": removed}
+        finally:
+            if owns_session:
+                await session.close()
+
     async def schedule(
         self,
         name: str,

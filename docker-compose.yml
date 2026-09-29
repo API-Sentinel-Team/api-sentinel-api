@@ -1,33 +1,37 @@
 version: '3.8'
 
 services:
-  fastapi:
+  api-sentinel-api:
     build: .
-    container_name: soc-fastapi
+    container_name: api-sentinel-api
     restart: unless-stopped
     ports:
       - "8000:8000"
-    volumes:
-      - ./server:/app/server
-      - ./tests-library:/app/tests-library
     environment:
       APP_NAME: API Security Engine
       DEBUG: "false"
-      DATABASE_URL: postgresql+asyncpg://app_user:generated_secure_password_here@postgres:5432/api_security
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_ENABLED: "true"
       TESTS_LIBRARY_PATH: /app/tests-library
-      JWT_SECRET: change-this-compose-jwt-secret-to-32-plus-chars
-      API_KEY: change-this-compose-api-key
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      API_KEY: ${API_KEY:?Set API_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a Fernet key, for example python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"}
-      CORS_ORIGINS_OVERRIDE: https://app.example.com
+      CORS_ORIGINS_OVERRIDE: ${CORS_ORIGINS_OVERRIDE:?Set CORS_ORIGINS_OVERRIDE}
       STARTUP_BOOTSTRAP_SCHEMA: "false"
       STARTUP_ENABLE_DEMO_BOOTSTRAP: "false"
       STARTUP_ENSURE_DEFAULT_PLAYBOOKS: "false"
+      STARTUP_ENABLE_TEST_SCHEDULER: "false"
+      STARTUP_ENABLE_RECON_SCHEDULER: "false"
       STARTUP_ENABLE_ANALYTICS_PROCESSOR: "false"
       STARTUP_ENABLE_ARCHIVER: "false"
-      UNIFIED_PIPELINE_MODE: shadow
+      UNIFIED_PIPELINE_MODE: ${UNIFIED_PIPELINE_MODE:-shadow}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+      PENTEST_SCAN_EXECUTION_MODE: queued
+    networks:
+      default:
+        aliases:
+          - api-sentinel-backend
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health/ready"]
       interval: 30s
@@ -39,13 +43,63 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_started
     command: /bin/sh -c "alembic upgrade head && uvicorn server.api.main:app --host 0.0.0.0 --port 8000"
+
+  api-sentinel-scheduler:
+    build: .
+    container_name: api-sentinel-scheduler
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      API_KEY: ${API_KEY:?Set API_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}
+      TESTS_LIBRARY_PATH: /app/tests-library
+      PENTEST_SCAN_EXECUTION_MODE: queued
+      STARTUP_ENABLE_TEST_SCHEDULER: "true"
+      STARTUP_ENABLE_RECON_SCHEDULER: ${STARTUP_ENABLE_RECON_SCHEDULER:-true}
+      RECON_SCHEDULER_ENABLED: ${RECON_SCHEDULER_ENABLED:-true}
+      STARTUP_ENABLE_CONTINUOUS_TESTING: ${STARTUP_ENABLE_CONTINUOUS_TESTING:-false}
+      CONTINUOUS_TESTING_ENABLED: ${CONTINUOUS_TESTING_ENABLED:-false}
+      STARTUP_ENABLE_OPENAPI_DRIFT: ${STARTUP_ENABLE_OPENAPI_DRIFT:-false}
+      OPENAPI_DRIFT_ENABLED: ${OPENAPI_DRIFT_ENABLED:-false}
+      SCHEDULER_SYNC_INTERVAL_SECONDS: ${SCHEDULER_SYNC_INTERVAL_SECONDS:-30}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api-sentinel-api:
+        condition: service_healthy
+    command: ["python", "-m", "server.services.scheduler_service"]
+
+  api-sentinel-archiver:
+    build: .
+    container_name: api-sentinel-archiver
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      API_KEY: ${API_KEY:?Set API_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}
+      ARCHIVE_ENABLED: "true"
+      ARCHIVE_INTERVAL_SECONDS: ${ARCHIVE_INTERVAL_SECONDS:-3600}
+      ARCHIVE_DIR: /app/data/archives
+      STARTUP_ARCHIVER_ACCOUNT_ID: ${STARTUP_ARCHIVER_ACCOUNT_ID:-0}
+    volumes:
+      - archive-data:/app/data/archives
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-sentinel-api:
+        condition: service_healthy
+    command: ["python", "-m", "server.services.archiver_service"]
 
   # Isolated scan worker with Schemathesis / Nuclei / ZAP CLIs.
   # Start with: docker compose --profile scan-worker up --build
-  scan-worker:
+  api-sentinel-scan-worker:
     profiles: ["scan-worker"]
     build:
       context: .
@@ -54,7 +108,7 @@ services:
     container_name: soc-scan-worker
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+asyncpg://app_user:generated_secure_password_here@postgres:5432/api_security
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
       REDIS_URL: redis://redis:6379/0
       DEBUG: "false"
       PENTEST_ALLOW_PRIVATE_TARGETS: "false"
@@ -70,9 +124,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      fastapi:
+      api-sentinel-api:
         condition: service_healthy
     command: ["worker"]
+
+  api-sentinel-frontend:
+    build:
+      context: ./api-sentinel-view-main
+      dockerfile: Dockerfile
+    container_name: api-sentinel-frontend
+    restart: unless-stopped
+    depends_on:
+      api-sentinel-api:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
 
   postgres:
     image: postgres:16-alpine
@@ -80,7 +146,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: generated_secure_password_here
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to match DATABASE_URL}
       POSTGRES_DB: api_security
     volumes:
       - soc-postgres-data:/var/lib/postgresql/data
@@ -123,8 +189,13 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    profiles: ["kafka"]
 
 volumes:
   soc-postgres-data:
   soc-redis-data:
   scan-worker-sandbox:
+  archive-data:
+
+networks:
+  default:

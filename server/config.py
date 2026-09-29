@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     STARTUP_ENSURE_DEFAULT_PLAYBOOKS: bool = False
     STARTUP_PLAYBOOK_ACCOUNT_ID: int = 0
     STARTUP_ENABLE_TEST_SCHEDULER: bool = True
+    SCHEDULER_SYNC_INTERVAL_SECONDS: int = 30
     STARTUP_ENABLE_INGESTION_QUEUE: bool = True
     STARTUP_ENABLE_ANALYTICS_PROCESSOR: bool = False
     STARTUP_ANALYTICS_ACCOUNT_ID: int = 0
@@ -213,6 +214,7 @@ class Settings(BaseSettings):
 
     # -- Archival / Cold Store ---------------------------------------------------------------
     ARCHIVE_ENABLED: bool = True
+    ARCHIVE_INTERVAL_SECONDS: int = 3600
     ARCHIVE_DIR: str = str(BASE_DIR / "data" / "archives")
     ARCHIVE_BUCKET: str = ""
     ARCHIVE_REGION: str = ""
