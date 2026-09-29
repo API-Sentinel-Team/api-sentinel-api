@@ -1,0 +1,49 @@
+name: Deploy (Staging/Prod)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}/api-sentinel:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+      - name: Deploy to cluster
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          helm upgrade --install api-sentinel infra/helm/api-sentinel \
+            --set image.repository=ghcr.io/${{ github.repository }}/api-sentinel \
+            --set image.tag=${{ github.sha }} \
+            --set env.DEBUG=false \
+            --set-string secrets.databaseUrl=${{ secrets.DATABASE_URL }} \
+            --set-string secrets.redisUrl=${{ secrets.REDIS_URL }} \
+            --set-string secrets.kafkaBootstrapServers=${{ secrets.KAFKA_BOOTSTRAP }} \
+            --set-string secrets.jwtSecret=${{ secrets.JWT_SECRET }} \
+            --set-string secrets.apiKey=${{ secrets.API_KEY }} \
+            --set-string secrets.encryptionKey=${{ secrets.ENCRYPTION_KEY }} \
+            --set-string env.CORS_ORIGINS_OVERRIDE=${{ secrets.CORS_ORIGINS_OVERRIDE }} \
+            --set serviceAccount.annotations.eks\.amazonaws\.com/role-arn=${{ secrets.IRSA_ROLE_ARN }} \
+            --set externalServices.s3Bucket=${{ secrets.ARCHIVE_BUCKET }} \
+            --set externalServices.s3Region=${{ secrets.ARCHIVE_REGION }}

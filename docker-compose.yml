@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build: .
+    container_name: soc-fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server:/app/server
+      - ./tests-library:/app/tests-library
+    environment:
+      APP_NAME: API Security Engine
+      DEBUG: "false"
+      DATABASE_URL: postgresql+asyncpg://app_user:generated_secure_password_here@postgres:5432/api_security
+      REDIS_URL: redis://redis:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_ENABLED: "true"
+      TESTS_LIBRARY_PATH: /app/tests-library
+      JWT_SECRET: change-this-compose-jwt-secret-to-32-plus-chars
+      API_KEY: change-this-compose-api-key
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a Fernet key, for example python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"}
+      CORS_ORIGINS_OVERRIDE: https://app.example.com
+      STARTUP_BOOTSTRAP_SCHEMA: "false"
+      STARTUP_ENABLE_DEMO_BOOTSTRAP: "false"
+      STARTUP_ENSURE_DEFAULT_PLAYBOOKS: "false"
+      STARTUP_ENABLE_ANALYTICS_PROCESSOR: "false"
+      STARTUP_ENABLE_ARCHIVER: "false"
+      UNIFIED_PIPELINE_MODE: shadow
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    command: /bin/sh -c "alembic upgrade head && uvicorn server.api.main:app --host 0.0.0.0 --port 8000"
+
+  # Isolated scan worker with Schemathesis / Nuclei / ZAP CLIs.
+  # Start with: docker compose --profile scan-worker up --build
+  scan-worker:
+    profiles: ["scan-worker"]
+    build:
+      context: .
+      dockerfile: Dockerfile.scan-worker
+    image: api-sentinel/scan-worker:local
+    container_name: soc-scan-worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app_user:generated_secure_password_here@postgres:5432/api_security
+      REDIS_URL: redis://redis:6379/0
+      DEBUG: "false"
+      PENTEST_ALLOW_PRIVATE_TARGETS: "false"
+      PENTEST_ENFORCE_TARGET_GUARD: "true"
+      PENTEST_TARGET_ALLOWLIST: "${PENTEST_TARGET_ALLOWLIST:-api.example.com}"
+      PENTEST_SCAN_WORK_DIR: /tmp/api-sentinel-scan
+      PENTEST_SCAN_WORKER_ISOLATION_MODE: process
+      PENTEST_KILL_SWITCH_ENABLED: "false"
+      TESTS_LIBRARY_PATH: /app/tests-library
+      API_SENTINEL_WORKER_ID: compose-scan-worker-1
+    volumes:
+      - scan-worker-sandbox:/tmp/api-sentinel-scan
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fastapi:
+        condition: service_healthy
+    command: ["worker"]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: soc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: generated_secure_password_here
+      POSTGRES_DB: api_security
+    volumes:
+      - soc-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d api_security"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: soc-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - soc-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  kafka:
+    image: confluentinc/confluent-local:7.5.0
+    container_name: soc-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,CONNECTIONS_FROM_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,CONNECTIONS_FROM_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+volumes:
+  soc-postgres-data:
+  soc-redis-data:
+  scan-worker-sandbox:

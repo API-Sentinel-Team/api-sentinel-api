@@ -1,0 +1,91 @@
+# Queued external scan worker (leased Deployment).
+#
+# P0-2 prep: mirrors infra/helm/api-sentinel/templates/scan-worker.yaml with the
+# wecrew cluster's registry and secrets. The image MUST be pinned by sha256 digest
+# before kubectl apply — build it with:
+#   REGISTRY_IMAGE=harbor.wecrew.in/finspot/api-sentinel-scan-worker:v1 \
+#     ./infra/scripts/build-and-push-scan-worker.sh
+#   docker buildx imagetools inspect <image>   # copy the digest
+# then replace IMAGE_DIGEST below (or edit this file after build).
+#
+# Isolation truthfulness: this is a leased Deployment, NOT per-run Job isolation
+# (ISO-2 is not implemented). The worker advertises
+# PENTEST_SCAN_WORKER_ISOLATION_MODE=leased_external_worker so artifacts never
+# claim kubernetes_job.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-sentinel-scan-worker
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-scan-worker
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: api-sentinel-scan-worker
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-scan-worker
+    spec:
+      # The worker claims runs directly from Postgres; it needs no Kubernetes API.
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: harbor-finspot-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scan-worker
+          # REPLACE with harbor.wecrew.in/finspot/api-sentinel-scan-worker@sha256:<digest>
+          image: harbor.wecrew.in/finspot/api-sentinel-scan-worker:latest
+          imagePullPolicy: Always
+          args: ["worker"]
+          envFrom:
+            - configMapRef:
+                name: api-sentinel-config
+            - secretRef:
+                name: api-sentinel-secrets
+          env:
+            - name: PENTEST_SCAN_EXECUTION_MODE
+              value: queued
+            - name: PENTEST_SCAN_WORKER_ISOLATION_MODE
+              value: leased_external_worker
+            - name: PENTEST_SCAN_WORK_DIR
+              value: /tmp/api-sentinel-scan
+            - name: PENTEST_SCAN_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+              ephemeral-storage: 4Gi
+          volumeMounts:
+            - name: scratch
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/appuser
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: scratch
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: home
+          emptyDir:
+            sizeLimit: 1Gi

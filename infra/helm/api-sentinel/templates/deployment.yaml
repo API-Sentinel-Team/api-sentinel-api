@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-sentinel.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "api-sentinel.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-sentinel.name" . }}
+    spec:
+      serviceAccountName: {{ include "api-sentinel.serviceAccountName" . }}
+      containers:
+        - name: api-sentinel
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              value: "{{ $val }}"
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: REDIS_URL
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: JWT_SECRET
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: API_KEY
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: ENCRYPTION_KEY
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: "{{ .Values.externalServices.kafkaSecurityProtocol }}"
+            - name: KAFKA_SASL_MECHANISM
+              value: "{{ .Values.externalServices.kafkaSaslMechanism }}"
+            - name: KAFKA_SASL_USERNAME
+              value: "{{ .Values.externalServices.kafkaSaslUsername }}"
+            - name: KAFKA_SASL_PASSWORD
+              value: "{{ .Values.externalServices.kafkaSaslPassword }}"
+            - name: ARCHIVE_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: ARCHIVE_BUCKET
+            - name: ARCHIVE_REGION
+              value: "{{ .Values.externalServices.s3Region }}"
+            - name: CLICKHOUSE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "api-sentinel.fullname" . }}-secrets
+                  key: CLICKHOUSE_URL
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readinessPath }}
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.livenessPath }}
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

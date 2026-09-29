@@ -1,0 +1,62 @@
+# Redis 7 for API Sentinel cache / rate-limit / queue helpers.
+# No auth required on ClusterIP-only service (cluster-internal).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-sentinel-redis
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-redis
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: api-sentinel-redis
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          args: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-sentinel-redis
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-redis
+spec:
+  selector:
+    app: api-sentinel-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis

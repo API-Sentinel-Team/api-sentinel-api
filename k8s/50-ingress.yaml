@@ -1,0 +1,41 @@
+# Public ingress — https://sentinel.wecrew.in/
+#
+# Issuer: letsencrypt-prod (DNS-01 via Hostinger webhook). Host Traefik owns :80,
+# so HTTP-01 self-checks contend; DNS-01 is required.
+#
+# Outside this file (ops host):
+#   1. DNS A record  sentinel.wecrew.in -> 213.210.36.154
+#   2. HostSNI(`sentinel.wecrew.in`) in /docker/traefik/dynamic/cluster.yml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-sentinel
+  namespace: api-sentinel
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/websocket-services: "api-sentinel-frontend"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - sentinel.wecrew.in
+      secretName: api-sentinel-tls
+  rules:
+    - host: sentinel.wecrew.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-sentinel-frontend
+                port:
+                  name: http

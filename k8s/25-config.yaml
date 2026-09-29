@@ -1,0 +1,50 @@
+# Non-secret runtime config for API Sentinel backend.
+# Secrets (JWT, DB URL, ENCRYPTION_KEY, …) live in api-sentinel-secrets / api-sentinel-db.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-sentinel-config
+  namespace: api-sentinel
+data:
+  APP_NAME: "API Security Engine"
+  VERSION: "1.0.0"
+  DEBUG: "false"
+  TENANT_RLS_ENABLED: "true"
+  TESTS_LIBRARY_PATH: "/app/tests-library"
+  CORS_ORIGINS_OVERRIDE: "https://sentinel.wecrew.in"
+  INGEST_EXCLUDE_HOSTS: "api-sentinel-backend,api-sentinel-backend.api-sentinel.svc.cluster.local,api-sentinel-frontend,api-sentinel-frontend.api-sentinel.svc.cluster.local"
+  UNIFIED_PIPELINE_MODE: "shadow"
+  KAFKA_ENABLED: "false"
+  STREAM_ENGINE: "IN_PROCESS"
+  STREAM_PROCESSING_ENABLED: "true"
+  STARTUP_BOOTSTRAP_SCHEMA: "false"
+  STARTUP_ENABLE_DEMO_BOOTSTRAP: "false"
+  STARTUP_REFRESH_TEMPLATE_LIBRARY: "true"
+  STARTUP_ENSURE_DEFAULT_PLAYBOOKS: "false"
+  STARTUP_PLAYBOOK_ACCOUNT_ID: "0"
+  STARTUP_ENABLE_TEST_SCHEDULER: "true"
+  STARTUP_ENABLE_INGESTION_QUEUE: "true"
+  STARTUP_ENABLE_ANALYTICS_PROCESSOR: "false"
+  STARTUP_ENABLE_ARCHIVER: "false"
+  STARTUP_ENABLE_WARM_EXPORTER: "false"
+  STARTUP_ENABLE_ENDPOINT_LIFECYCLE: "true"
+  STARTUP_ENABLE_RECON_SCHEDULER: "false"
+  STARTUP_ENABLE_STREAM_PIPELINE: "true"
+  STARTUP_ENABLE_CONTINUOUS_TESTING: "false"
+  STARTUP_ENABLE_OPENAPI_DRIFT: "false"
+  ML_TRAINING_ENABLED: "false"
+  # Active scan safety — fail closed
+  PENTEST_REQUIRE_AUTH_PROFILE_FOR_ACTIVE_SCANS: "true"
+  PENTEST_ENFORCE_TARGET_GUARD: "true"
+  PENTEST_ALLOW_PRIVATE_TARGETS: "false"
+  PENTEST_RESOLVE_TARGET_HOSTS: "true"
+  PENTEST_FAIL_CLOSED_ON_TARGET_DNS_ERROR: "true"
+  PENTEST_TARGET_ALLOWLIST: "sentinel.wecrew.in,api.example.com"
+  PENTEST_SCAN_EXECUTION_MODE: "queued"
+  PENTEST_KILL_SWITCH_ENABLED: "false"
+  INTEGRATIONS_ENFORCE_DESTINATION_GUARD: "true"
+  INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS: "false"
+  SOURCE_CODE_ENFORCE_REPO_GUARD: "true"
+  SOURCE_CODE_ALLOW_PRIVATE_REPOS: "false"
+  SOURCE_CODE_ALLOW_LOCAL_PATHS: "false"

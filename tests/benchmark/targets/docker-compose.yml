@@ -1,0 +1,25 @@
+# Deliberately-vulnerable API targets for the API Sentinel detection benchmark.
+# Start ONLY in an isolated/owned environment — these apps are intentionally
+# insecure. They bind to localhost so the platform's TargetGuard allows them only
+# when PENTEST_ALLOW_PRIVATE_TARGETS=true (dev/benchmark mode).
+#
+#   docker compose -f tests/benchmark/targets/docker-compose.yml up -d vampi
+#   python -m tests.benchmark.runner tests/benchmark/corpus/vampi.yaml
+#   docker compose -f tests/benchmark/targets/docker-compose.yml down
+
+services:
+  vampi:
+    # VAmPI — Vulnerable API (erev0s). vulnerable=1 enables the insecure paths.
+    image: erev0s/vampi:latest
+    environment:
+      vulnerable: "1"
+    ports:
+      - "127.0.0.1:5000:5000"
+    restart: unless-stopped
+
+  # crAPI (OWASP) is a larger, multi-service target. Uncomment and pull the
+  # official compose from github.com/OWASP/crAPI when you add a crapi.yaml corpus.
+  # crapi:
+  #   extends:
+  #     file: ./crapi-compose.yml
+  #     service: crapi-web
