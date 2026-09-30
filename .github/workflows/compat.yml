@@ -16,8 +16,8 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
   DEBUG: "true"
-  CORE_REF: v0.3.1
-  WORKER_REF: v0.3.2
+  CORE_REF: v0.3.2
+  WORKER_REF: v0.3.3
 
 jobs:
   cross-service:
