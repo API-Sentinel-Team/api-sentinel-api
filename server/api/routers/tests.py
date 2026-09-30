@@ -417,6 +417,20 @@ async def cancel_run(
         }
 
     previous_status = current_status
+    if current_status == "PENDING":
+        # No worker has claimed it, so nobody would ever move it out of CANCEL_REQUESTED.
+        run.status = "CANCELED"
+        run.completed_at = datetime.datetime.now(datetime.timezone.utc)
+        await audit_scan_event(
+            db,
+            action="SCAN_CANCELED",
+            account_id=account_id,
+            run_id=run.id,
+            user_id=payload.get("user_id"),
+            details={"previous_status": previous_status},
+        )
+        await db.commit()
+        return {"status": "canceled", "run_id": run.id, "run_status": "CANCELED"}
     run.status = "CANCEL_REQUESTED"
     await audit_scan_event(
         db,

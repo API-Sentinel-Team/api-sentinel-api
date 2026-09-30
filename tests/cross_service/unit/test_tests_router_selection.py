@@ -1247,13 +1247,25 @@ async def test_scan_runner_cancels_before_start_when_kill_switch_enabled(test_en
 
 
 @pytest.mark.asyncio
-async def test_cancel_run_endpoint_marks_pending_run_cancel_requested(client, db_session, auth_headers):
-    run = models.TestRun(
-        account_id=1000000,
-        status="PENDING",
-        template_ids=["template-1"],
-        endpoint_ids=[],
-    )
+async def test_cancelling_a_pending_run_finishes_it_immediately(client, db_session, auth_headers):
+    # No worker has claimed a PENDING run, so nobody would ever move it out of CANCEL_REQUESTED.
+    run = models.TestRun(account_id=1000000, status="PENDING", template_ids=["template-1"], endpoint_ids=[])
+    db_session.add(run)
+    await db_session.commit()
+
+    response = await client.post(f"/api/tests/runs/{run.id}/cancel", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "canceled"
+    stored = await db_session.get(models.TestRun, run.id)
+    await db_session.refresh(stored)
+    assert stored.status == "CANCELED" and stored.completed_at is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("app_sessions_use_test_db")
+async def test_cancelling_a_running_run_asks_the_worker_to_stop(client, db_session, auth_headers):
+    run = models.TestRun(account_id=1000000, status="RUNNING", template_ids=["template-1"], endpoint_ids=[])
     db_session.add(run)
     await db_session.commit()
 
@@ -1261,8 +1273,8 @@ async def test_cancel_run_endpoint_marks_pending_run_cancel_requested(client, db
 
     assert response.status_code == 200
     assert response.json()["status"] == "cancel_requested"
-
     stored = await db_session.get(models.TestRun, run.id)
+    await db_session.refresh(stored)
     assert stored.status == "CANCEL_REQUESTED"
     audit = (
         await db_session.execute(
@@ -1274,7 +1286,7 @@ async def test_cancel_run_endpoint_marks_pending_run_cancel_requested(client, db
     ).scalar_one()
     assert audit.account_id == 1000000
     assert audit.user_id == "test-user"
-    assert audit.details == {"previous_status": "PENDING"}
+    assert audit.details == {"previous_status": "RUNNING"}
 
 
 @pytest.mark.asyncio
@@ -2148,3 +2160,36 @@ async def test_agentic_pass_persists_chain_detector_and_confirmed_findings_as_vu
         assert vuln.evidence["evidence_completeness"]["complete"] is True
         assert verify_vulnerability_evidence(vuln.evidence)["verified"] is True
     assert len(test_results) == 3
+
+
+@pytest.mark.asyncio
+async def test_a_worker_owned_run_with_a_cancel_request_ends_canceled(test_engine, monkeypatch):
+    # Regression: the worker's ownership filters only matched DISPATCHED/RUNNING, so a run that was
+    # cancelled while claimed stayed CANCEL_REQUESTED forever.
+    template = {"id": "held-template", "info": {"severity": "LOW"}, "execute": {"requests": [{"req": [{}]}]}}
+    monkeypatch.setattr(tests_router.WordlistManager, "get_instance", lambda *a, **k: _FakeWordlistManager([template]))
+    _FakeExecutionEngine.calls = []
+    monkeypatch.setattr(run_executor, "ExecutionEngine", _FakeExecutionEngine)
+
+    session_factory = async_sessionmaker(bind=test_engine, expire_on_commit=False)
+    async with session_factory() as db:
+        endpoint = models.APIEndpoint(
+            account_id=1000000, method="GET", protocol="http", host="api.example.test", path="/held"
+        )
+        run = models.TestRun(
+            account_id=1000000,
+            status="CANCEL_REQUESTED",
+            worker_id="worker-1",
+            template_ids=[template["id"]],
+            endpoint_ids=[endpoint.id],
+        )
+        db.add_all([endpoint, run])
+        await db.commit()
+        run_id, endpoint_id = run.id, endpoint.id
+
+    await run_executor.run_security_tasks(run_id, [template["id"]], [endpoint_id], 1000000, db_bind=test_engine)
+
+    async with session_factory() as db:
+        finished = (await db.execute(select(models.TestRun).where(models.TestRun.id == run_id))).scalar_one()
+    assert finished.status == "CANCELED"
+    assert finished.completed_at is not None
