@@ -11,7 +11,7 @@ data:
   VERSION: "1.0.0"
   DEBUG: "false"
   TENANT_RLS_ENABLED: "true"
-  TESTS_LIBRARY_PATH: "/app/tests-library"
+  # TESTS_LIBRARY_PATH is unset on purpose: the template library ships inside sentinel-core.
   CORS_ORIGINS_OVERRIDE: "https://sentinel.wecrew.in"
   INGEST_EXCLUDE_HOSTS: "api-sentinel-backend,api-sentinel-backend.api-sentinel.svc.cluster.local,api-sentinel-frontend,api-sentinel-frontend.api-sentinel.svc.cluster.local"
   UNIFIED_PIPELINE_MODE: "shadow"
@@ -23,6 +23,7 @@ data:
   STARTUP_REFRESH_TEMPLATE_LIBRARY: "true"
   STARTUP_ENSURE_DEFAULT_PLAYBOOKS: "false"
   STARTUP_PLAYBOOK_ACCOUNT_ID: "0"
+  # Read by the scheduler/archiver pods (34-scheduler.yaml, 36-archiver.yaml), no longer by the API:
   STARTUP_ENABLE_TEST_SCHEDULER: "true"
   STARTUP_ENABLE_INGESTION_QUEUE: "true"
   STARTUP_ENABLE_ANALYTICS_PROCESSOR: "false"

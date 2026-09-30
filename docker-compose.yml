@@ -15,7 +15,6 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      TESTS_LIBRARY_PATH: /app/tests-library
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       API_KEY: ${API_KEY:?Set API_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a Fernet key, for example python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"}
@@ -59,7 +58,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       API_KEY: ${API_KEY:?Set API_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}
-      TESTS_LIBRARY_PATH: /app/tests-library
       PENTEST_SCAN_EXECUTION_MODE: queued
       STARTUP_ENABLE_TEST_SCHEDULER: "true"
       STARTUP_ENABLE_RECON_SCHEDULER: ${STARTUP_ENABLE_RECON_SCHEDULER:-true}
@@ -123,7 +121,6 @@ services:
       PENTEST_SCAN_WORK_DIR: /tmp/api-sentinel-scan
       PENTEST_SCAN_WORKER_ISOLATION_MODE: process
       PENTEST_KILL_SWITCH_ENABLED: "false"
-      TESTS_LIBRARY_PATH: /app/tests-library
       API_SENTINEL_WORKER_ID: compose-scan-worker-1
     volumes:
       - scan-worker-sandbox:/tmp/api-sentinel-scan

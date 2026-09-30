@@ -1,0 +1,57 @@
+{{- if .Values.archiver.enabled }}
+{{- $image := required "archiver.image must be a registry image pinned by sha256 digest" .Values.archiver.image }}
+{{- if not (regexMatch "^.+@sha256:[a-f0-9]{64}$" $image) }}
+{{- fail "archiver.image must be pinned by sha256 digest" }}
+{{- end }}
+# Deletes/archives data past tenant retention, so it is off until you turn it on deliberately.
+# Exactly one replica: the loop is not safe to run concurrently against the same tenant rows.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-sentinel.fullname" . }}-archiver
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "api-sentinel.fullname" . }}-archiver
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-sentinel.fullname" . }}-archiver
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: archiver
+          image: {{ $image | quote }}
+          command: ["python", "-m", "sentinel_archiver.services.archiver_service"]
+          envFrom:
+            - secretRef:
+                name: {{ include "api-sentinel.fullname" . }}-secrets
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+{{ toYaml .Values.archiver.resources | indent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

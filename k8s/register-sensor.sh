@@ -35,8 +35,8 @@ os.environ.setdefault("SENSOR_HOST", """${HOST}""")
 os.environ.setdefault("SENSOR_VERSION", """${SENSOR_VERSION}""")
 
 from sqlalchemy import select
-from server.models.core import Sensor
-from server.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.models.core import Sensor
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
 from server.modules.sensors.keys import hash_sensor_key
 
 

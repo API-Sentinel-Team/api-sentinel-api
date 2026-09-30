@@ -13,6 +13,23 @@ scanWorker:
       memory: "3Gi"
       ephemeral-storage: "4Gi"
 
+# The API no longer runs the scheduler/archiver loops in-process; these are their own services.
+# Images are built from api-sentinel-scheduler / api-sentinel-archiver and must be digest-pinned.
+scheduler:
+  enabled: false
+  image: ""
+  resources:
+    requests: {cpu: "50m", memory: "256Mi"}
+    limits: {cpu: "1000m", memory: "1Gi"}
+
+# Off by default on purpose: the archiver deletes data past tenant retention (see HARD-2).
+archiver:
+  enabled: false
+  image: ""
+  resources:
+    requests: {cpu: "50m", memory: "256Mi"}
+    limits: {cpu: "1000m", memory: "1Gi"}
+
 image:
   repository: api-sentinel
   tag: "latest"
@@ -44,7 +61,7 @@ env:
   APP_NAME: "API Security Engine"
   DEBUG: "false"
   TENANT_RLS_ENABLED: "true"
-  TESTS_LIBRARY_PATH: "/app/tests-library"
+  # TESTS_LIBRARY_PATH intentionally unset: the template library ships inside sentinel-core.
   CORS_ORIGINS_OVERRIDE: "https://app.example.com"
   UNIFIED_PIPELINE_MODE: "shadow"
   STARTUP_BOOTSTRAP_SCHEMA: "false"

@@ -1,0 +1,57 @@
+{{- if .Values.scheduler.enabled }}
+{{- $image := required "scheduler.image must be a registry image pinned by sha256 digest" .Values.scheduler.image }}
+{{- if not (regexMatch "^.+@sha256:[a-f0-9]{64}$" $image) }}
+{{- fail "scheduler.image must be pinned by sha256 digest" }}
+{{- end }}
+# Enqueues scheduled scans and runs the recon, continuous-testing and OpenAPI-drift loops.
+# Exactly one replica: the loop is not safe to run concurrently against the same tenant rows.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-sentinel.fullname" . }}-scheduler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "api-sentinel.fullname" . }}-scheduler
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-sentinel.fullname" . }}-scheduler
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: scheduler
+          image: {{ $image | quote }}
+          command: ["python", "-m", "sentinel_scheduler.services.scheduler_service"]
+          envFrom:
+            - secretRef:
+                name: {{ include "api-sentinel.fullname" . }}-secrets
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+{{ toYaml .Values.scheduler.resources | indent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

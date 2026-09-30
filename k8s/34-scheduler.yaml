@@ -1,0 +1,62 @@
+# Scheduler: saved cron scan schedules plus recon, continuous-testing and OpenAPI-drift loops. Enqueues runs only.
+# Runs in its own pod (image built from the api-sentinel-scheduler repo). The API no longer runs this
+# loop in-process, so without this Deployment the work below silently stops.
+# Exactly one replica: the loops are not safe to run concurrently against the same tenant rows.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-sentinel-scheduler
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-scheduler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: api-sentinel-scheduler
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-scheduler
+    spec:
+      imagePullSecrets:
+        - name: harbor-finspot-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: scheduler
+          image: harbor.wecrew.in/finspot/api-sentinel-scheduler:latest
+          imagePullPolicy: Always
+          command: ["python", "-m", "sentinel_scheduler.services.scheduler_service"]
+          envFrom:
+            - configMapRef:
+                name: api-sentinel-config
+            - secretRef:
+                name: api-sentinel-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          emptyDir: {}

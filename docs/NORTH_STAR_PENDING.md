@@ -15,6 +15,38 @@ cluster / registry / credentials / staging).
 
 ---
 
+## Service split (2026-09-30) - what changed for the North Star
+
+The backend is now six repos: `api-sentinel-core` (shared models, the only migrations, policy, scan
+planning, template library), `api-sentinel-api` (queues scans, never executes), `api-sentinel-scan-worker`
+(the only component that sends attack traffic), `api-sentinel-scheduler`, `api-sentinel-archiver`, and the
+frontend. Many file paths in the tables below predate the split: shared code is now under
+`sentinel_core/`, worker code under `sentinel_worker/`, scheduler under `sentinel_scheduler/`,
+archiver under `sentinel_archiver/`; `server/` is the API only.
+
+What the split does for the tracker:
+
+- **P0-1 (queued mode)**: the API now *rejects* any mode other than `queued` and it is the default, so
+  in-process scan execution can no longer happen by misconfiguration. Cluster activation and evidence
+  are still required, so this stays BLOCKED.
+- **P0-2 (deploy the worker)**: manifests now exist for the worker, scheduler and archiver
+  (`k8s/32`, `34`, `36`; Helm `scan-worker`, `scheduler`, `archiver`), and `k8s/build-and-push.sh`
+  builds each from its own repo. Images have not been built or deployed, so this stays BLOCKED.
+- **HARD-2**: the scheduler/archiver/recon/continuous/drift loops moved out of the API into their own
+  services. Before this change the k8s API pod ran the scheduler in-process; without the new
+  `34-scheduler.yaml` Deployment, scheduled scans would silently stop. The archiver Deployment ships at
+  `replicas: 0` because it deletes data past retention and archiving is intentionally staged.
+- **Boundary enforcement** (new, tested in `tests/unit/test_service_boundaries.py`): core imports no
+  service, services never import each other, only the API touches `server.api`.
+- **Legacy `POST /api/nuclei/scan` retired**: the API no longer runs Nuclei itself; use the queued,
+  profile-bound route. Its execution tests moved to `tests/unit/test_nuclei_engine.py`.
+
+Not verified by the split work: Docker image builds, hosted CI runs (each repo needs a
+`CORE_REPO_TOKEN` secret to read the private core repo), Helm rendering, and the cross-service tests in
+`tests/cross_service/`.
+
+---
+
 ## P0 — blocks the release milestone
 
 | # | Item | Where | Owner | Sprint | Status |

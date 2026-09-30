@@ -1,0 +1,66 @@
+# Archiver: tenant-scoped evidence, request-log and pentest-artifact retention.
+# Runs in its own pod (image built from the api-sentinel-archiver repo). The API no longer runs this
+# loop in-process, so without this Deployment the work below silently stops.
+# Exactly one replica when active: the loop is not safe to run concurrently against the same tenant rows.
+#
+# SHIPS SCALED TO ZERO ON PURPOSE. The archiver deletes request logs, evidence and pentest artifacts
+# past each tenant's retention window, and archiving is deliberately staged off (NORTH_STAR_PENDING
+# HARD-2). Scale it up only after a retention dry run: kubectl -n api-sentinel scale deploy/api-sentinel-archiver --replicas=1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-sentinel-archiver
+  namespace: api-sentinel
+  labels:
+    app: api-sentinel-archiver
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: api-sentinel-archiver
+  template:
+    metadata:
+      labels:
+        app: api-sentinel-archiver
+    spec:
+      imagePullSecrets:
+        - name: harbor-finspot-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: archiver
+          image: harbor.wecrew.in/finspot/api-sentinel-archiver:latest
+          imagePullPolicy: Always
+          command: ["python", "-m", "sentinel_archiver.services.archiver_service"]
+          envFrom:
+            - configMapRef:
+                name: api-sentinel-config
+            - secretRef:
+                name: api-sentinel-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
