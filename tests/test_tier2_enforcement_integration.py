@@ -31,6 +31,19 @@ from server.modules.response.default_playbooks import ensure_default_playbooks
 from server.api.websocket.event_types import WSEventType
 
 
+@pytest.fixture(autouse=True)
+def legacy_correlation_pipeline(monkeypatch):
+    """These tests assert the legacy severity-weight scoring (HIGH = 0.20, MEDIUM = 0.10).
+
+    The unified detection pipeline (the default mode is "shadow") scores through different
+    agents, so the mode these assertions depend on is pinned here instead of inherited from
+    whatever the default happens to be.
+    """
+    from sentinel_core.config import settings
+
+    monkeypatch.setattr(settings, "UNIFIED_PIPELINE_MODE", "off")
+
+
 @pytest.mark.asyncio
 async def test_correlation_engine_risk_scoring(db: AsyncSession, account_id: int):
     """Test threat actor risk scoring with severity-weighted increments."""

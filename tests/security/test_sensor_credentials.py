@@ -33,6 +33,7 @@ async def test_sensor_register_hashes_key_at_rest_and_returns_safe_urls(client, 
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("app_sessions_use_test_db")
 async def test_sensor_heartbeat_accepts_header_key_without_url_secret(client, db_session):
     raw_key = "raw-sensor-heartbeat-key"
     sensor = Sensor(

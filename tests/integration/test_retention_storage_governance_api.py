@@ -103,11 +103,6 @@ async def test_storage_archive_routes_require_privilege_and_hide_absolute_paths(
     archive_file.write_bytes(b"compressed-placeholder")
     monkeypatch.setattr(settings, "ARCHIVE_DIR", str(archive_root))
 
-    async def fake_archive_once(archived_account_id: int):
-        return {"status": "ok", "account_id": archived_account_id, "archived": {"request_logs": 0}}
-
-    monkeypatch.setattr(storage_router, "archive_once", fake_archive_once)
-
     member_headers = _headers_for_role("MEMBER", account_id)
     auditor_headers = _headers_for_role("AUDITOR", account_id)
     security_headers = _headers_for_role("SECURITY_ENGINEER", account_id)
@@ -124,7 +119,25 @@ async def test_storage_archive_routes_require_privilege_and_hide_absolute_paths(
     assert not os.path.isabs(archive["path"])
     assert str(archive_root) not in str(list_response.json())
 
+    # The API only queues the work; nothing is archived inside the request.
     run_response = await client.post("/api/storage/archive", headers=security_headers)
-    assert run_response.status_code == 200
-    assert run_response.json()["status"] == "ok"
-    assert run_response.json()["account_id"] == account_id
+    assert run_response.status_code == 202
+    body = run_response.json()
+    assert body["created"] is True
+    assert body["job"]["status"] == "PENDING" and body["job"]["attempts"] == 0
+    assert archive_file.exists()  # still there: the request did not run the archiver
+
+    # A second request while one is in flight returns the same job instead of stacking another.
+    again = await client.post("/api/storage/archive", headers=security_headers)
+    assert again.status_code == 200
+    assert again.json()["created"] is False and again.json()["job"]["id"] == body["job"]["id"]
+
+    # Status is visible to the tenant's auditors, and only to that tenant.
+    status = await client.get(f"/api/storage/archive/jobs/{body['job']['id']}", headers=auditor_headers)
+    assert status.status_code == 200 and status.json()["status"] == "PENDING"
+    other_tenant = _headers_for_role("AUDITOR", account_id + 1)
+    assert (await client.get(f"/api/storage/archive/jobs/{body['job']['id']}", headers=other_tenant)).status_code == 404
+    listing = await client.get("/api/storage/archive/jobs", headers=auditor_headers)
+    assert [j["id"] for j in listing.json()["jobs"]] == [body["job"]["id"]]
+    assert (await client.get("/api/storage/archive/jobs", headers=other_tenant)).json()["jobs"] == []
+    assert (await client.get(f"/api/storage/archive/jobs/{body['job']['id']}", headers=member_headers)).status_code == 403

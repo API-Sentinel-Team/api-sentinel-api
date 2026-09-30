@@ -68,6 +68,27 @@ async def client(db_session):
     app.dependency_overrides.clear()
 
 
+@pytest_asyncio.fixture
+async def app_sessions_use_test_db(db_session):
+    """Opt in for tests whose route or middleware opens its own session (AsyncSessionLocal).
+
+    Those sessions normally hit the default on-disk SQLite file, so a test that expects them to see
+    its data would only pass on a machine where that file happened to be migrated. This points them
+    at the test database instead. It is opt-in (not part of ``client``) because the sessions then
+    share the test connection: a test that only ``flush()``es its rows can have them rolled back by
+    another session, so use it only with tests that ``commit()``.
+    """
+    from sentinel_core.modules.persistence import database as _database
+
+    factories = (_database.AsyncSessionLocal, _database.ReadOnlySessionLocal)
+    previous = {factory: factory.kw.get("bind") for factory in factories}
+    for factory in factories:
+        factory.configure(bind=db_session.bind)
+    yield
+    for factory, bind in previous.items():
+        factory.configure(bind=bind)
+
+
 @pytest.fixture
 def auth_headers():
     token = JWTIssuer.create_access_token({

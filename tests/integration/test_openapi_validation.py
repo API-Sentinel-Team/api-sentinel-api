@@ -20,6 +20,7 @@ def _headers_for_role(role: str, account_id: int = 1000000) -> dict[str, str]:
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("app_sessions_use_test_db")
 async def test_openapi_rebuild_and_validate(client, auth_headers):
     rebuild = await client.post("/api/openapi/rebuild", headers=auth_headers)
     assert rebuild.status_code == 200
