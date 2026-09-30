@@ -1,3 +1,3 @@
 # Runtime pins live in api-sentinel-core; this file pins the shared core release.
-sentinel-core @ git+https://github.com/API-Sentinel-Team/api-sentinel-core.git@v0.1.0
+sentinel-core @ git+https://github.com/API-Sentinel-Team/api-sentinel-core.git@v0.1.1
 uvicorn[standard]==0.42.0

@@ -1,5 +1,19 @@
 version: '3.8'
 
+# Settings every backend service validates at startup when DEBUG=false (sentinel_core.config refuses to
+# start without them). Shared so the services cannot drift apart.
+x-sentinel-required: &sentinel-required
+  DEBUG: "false"
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+  API_KEY: ${API_KEY:?Set API_KEY}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a Fernet key}
+  SENSOR_KEY_HASH_PEPPER: ${SENSOR_KEY_HASH_PEPPER:?Set SENSOR_KEY_HASH_PEPPER}
+  CICD_GATE_SIGNING_SECRET: ${CICD_GATE_SIGNING_SECRET:?Set CICD_GATE_SIGNING_SECRET}
+  CORS_ORIGINS_OVERRIDE: ${CORS_ORIGINS_OVERRIDE:?Set CORS_ORIGINS_OVERRIDE}
+  PENTEST_ENFORCE_TARGET_GUARD: "true"
+  PENTEST_RESOLVE_TARGET_HOSTS: "true"
+  PENTEST_TARGET_ALLOWLIST: "${PENTEST_TARGET_ALLOWLIST:-api.example.com}"
+
 services:
   api-sentinel-api:
     build:
@@ -10,6 +24,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      <<: *sentinel-required
       APP_NAME: API Security Engine
       DEBUG: "false"
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
@@ -53,6 +68,7 @@ services:
     container_name: api-sentinel-scheduler
     restart: unless-stopped
     environment:
+      <<: *sentinel-required
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -83,6 +99,7 @@ services:
     container_name: api-sentinel-archiver
     restart: unless-stopped
     environment:
+      <<: *sentinel-required
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -112,6 +129,7 @@ services:
     container_name: soc-scan-worker
     restart: unless-stopped
     environment:
+      <<: *sentinel-required
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the production Postgres URL}
       REDIS_URL: redis://redis:6379/0
       DEBUG: "false"
