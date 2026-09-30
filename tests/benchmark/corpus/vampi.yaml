@@ -1,0 +1,78 @@
+# Ground truth for VAmPI (Vulnerable API) — github.com/erev0s/VAmPI
+# Run with vulnerable mode: docker run -p 5000:5000 erev0s/vampi  (vulnerable=1)
+# Each entry is a vulnerability the platform SHOULD find. Paths use VAmPI's real
+# routes. owasp_category must be one of tests/benchmark/corpus.py:OWASP_API_CATEGORIES.
+target_name: VAmPI
+base_url: http://localhost:5000
+description: >
+  Deliberately vulnerable REST API by erev0s. Known BOLA, broken auth, excessive
+  data exposure, and mass-assignment flaws used as a detection benchmark.
+
+ground_truth:
+  - method: GET
+    path: /users/v1/{username}
+    owasp_category: API3_BOPLA
+    severity: HIGH
+    title: Excessive data exposure on user lookup
+    notes: Returns password/email fields to any caller.
+
+  - method: GET
+    path: /users/v1/_debug
+    owasp_category: API3_BOPLA
+    severity: HIGH
+    title: Debug endpoint exposes all users with passwords
+    notes: Dumps the full user table including credentials.
+
+  - method: GET
+    path: /users/v1/{username}
+    owasp_category: API2_BROKEN_AUTH
+    severity: HIGH
+    title: Unauthenticated user profile read (missing authentication)
+    notes: >
+      GET /users/v1/{username} returns any user's profile (incl. email) with NO
+      authentication required. Confirmed via a no-auth control request: the
+      anonymous request returns the same sensitive data. This is missing
+      authentication, not a cross-identity BOLA — the multi-identity replay's
+      control step reclassifies it correctly.
+
+  - method: PUT
+    path: /users/v1/{username}/email
+    owasp_category: API1_BOLA
+    severity: HIGH
+    title: BOLA on email update
+    notes: A user can update another user's email by changing the path username.
+
+  - method: DELETE
+    path: /users/v1/{username}
+    owasp_category: API5_BFLA
+    severity: CRITICAL
+    title: BFLA on user deletion
+    notes: Non-admin can delete users; admin-only function exposed.
+
+  - method: POST
+    path: /users/v1/register
+    owasp_category: API3_BOPLA
+    severity: HIGH
+    title: Mass assignment of admin flag at registration
+    notes: Client-supplied admin=true is honored, escalating privilege.
+
+  - method: POST
+    path: /users/v1/login
+    owasp_category: API2_BROKEN_AUTH
+    severity: HIGH
+    title: Weak/again-usable JWT and no lockout
+    notes: Predictable token handling, unlimited login attempts.
+
+  - method: GET
+    path: /books/v1/{book_title}
+    owasp_category: API1_BOLA
+    severity: MEDIUM
+    title: BOLA on book retrieval
+    notes: Secret field of other users' books is readable.
+
+  - method: GET
+    path: /users/v1/{username}
+    owasp_category: API8_MISCONFIGURATION
+    severity: HIGH
+    title: SQL injection via username path parameter
+    notes: VAmPI passes the username into a raw query; error-based SQLi detectable.
