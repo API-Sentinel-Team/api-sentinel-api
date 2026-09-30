@@ -1,0 +1,28 @@
+name: Load Test (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Target host"
+        required: true
+        default: "http://localhost:8000"
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run locust headless
+        env:
+          TARGET_HOST: ${{ github.event.inputs.host }}
+        run: |
+          locust -f tests/load/locustfile.py --headless -u 50 -r 5 \
+            --run-time 30s --host $TARGET_HOST --only-summary

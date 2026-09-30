@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   api-sentinel-api:
-    build: .
+    build:
+      context: .
+      secrets: [gh_token]
     container_name: api-sentinel-api
     restart: unless-stopped
     ports:
@@ -46,7 +48,9 @@ services:
     command: /bin/sh -c "sentinel-migrate upgrade head && uvicorn server.api.main:app --host 0.0.0.0 --port 8000"
 
   api-sentinel-scheduler:
-    build: .
+    build:
+      context: ../api-sentinel-scheduler
+      secrets: [gh_token]
     container_name: api-sentinel-scheduler
     restart: unless-stopped
     environment:
@@ -75,7 +79,9 @@ services:
     command: ["python", "-m", "sentinel_scheduler.services.scheduler_service"]
 
   api-sentinel-archiver:
-    build: .
+    build:
+      context: ../api-sentinel-archiver
+      secrets: [gh_token]
     container_name: api-sentinel-archiver
     restart: unless-stopped
     environment:
@@ -102,8 +108,8 @@ services:
   api-sentinel-scan-worker:
     profiles: ["scan-worker"]
     build:
-      context: .
-      dockerfile: Dockerfile.scan-worker
+      context: ../api-sentinel-scan-worker
+      secrets: [gh_token]
     image: api-sentinel/scan-worker:local
     container_name: soc-scan-worker
     restart: unless-stopped
@@ -130,7 +136,7 @@ services:
 
   api-sentinel-frontend:
     build:
-      context: ./api-sentinel-view-main
+      context: ../api-sentinel-frontend
       dockerfile: Dockerfile
     container_name: api-sentinel-frontend
     restart: unless-stopped
@@ -199,3 +205,8 @@ volumes:
 
 networks:
   default:
+
+# sentinel-core is a private repo; export GH_TOKEN (a token that can read it) before `docker compose build`.
+secrets:
+  gh_token:
+    environment: GH_TOKEN

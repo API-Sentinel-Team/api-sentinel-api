@@ -2,13 +2,24 @@ name: CI
 
 on:
   push:
-    branches: [main, "release/**"]
+    branches:
+      - main
+      - "release/**"
+      - "codex/**"
+      - "p0/**"
+      - "docs/**"
   pull_request:
-    branches: [main, "release/**"]
+    branches:
+      - main
+      - "release/**"
+      - "codex/**"
+      - "p0/**"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,12 +27,127 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  DEBUG: "true"
+  PYTHONPATH: ${{ github.workspace }}
 
 jobs:
-  test:
-    name: Tests
+  backend-unit:
+    name: Backend unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      # Actions are SHA-pinned (CI-2). Digests verified against the GitHub API on 2026-09-24:
+      # checkout v4.2.2 = 11bd71901bbe5b1630ceea73d27597364c9af683
+      # setup-python v5.6.0 = a26af69be951a213d495a4c3e4e4022e16d87065
+      # setup-node v4.4.0 = 49933ea5288caeca8642d1e84afbd3f7d6820020
+      # upload-artifact v4.6.2 = ea165f8d65b6e75b540449e92b4886f43607fa02
+      # codeql-action v3 (2026-09-24) = 1190a975f95ce23525efb6a3fc21ea29567c1b52
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Let pip read the private sentinel-core repo
+        env:
+          CORE_REPO_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
+        run: git config --global url."https://x-access-token:${CORE_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run backend unit tests
+        env:
+          DEBUG: "true"
+        run: |
+          mkdir -p artifacts/backend/unit
+          pytest tests/unit/ -v \
+            --cov=server \
+            --cov-report=term-missing \
+            --cov-report=xml:artifacts/backend/unit/coverage.xml \
+            --junitxml=artifacts/backend/unit/junit.xml
+      - name: Verify backend unit evidence
+        if: always()
+        run: |
+          test -s artifacts/backend/unit/junit.xml
+          test -s artifacts/backend/unit/coverage.xml
+      - name: Upload backend unit artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-unit-junit-coverage
+          path: artifacts/backend/unit
+          if-no-files-found: error
+          retention-days: 14
+
+  backend-integration:
+    name: Backend integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: api_security
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d api_security"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Let pip read the private sentinel-core repo
+        env:
+          CORE_REPO_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
+        run: git config --global url."https://x-access-token:${CORE_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run backend integration tests
+        env:
+          DEBUG: "true"
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/api_security
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          mkdir -p artifacts/backend/integration
+          pytest tests/integration/ -v \
+            --asyncio-mode=auto \
+            --junitxml=artifacts/backend/integration/junit.xml
+      - name: Verify backend integration evidence
+        if: always()
+        run: |
+          test -s artifacts/backend/integration/junit.xml
+      - name: Upload backend integration artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-integration-junit
+          path: artifacts/backend/integration
+          if-no-files-found: error
+          retention-days: 14
+
+  backend-security:
+    name: Backend security tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,28 +156,304 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: requirements.txt
       - name: Let pip read the private sentinel-core repo
         env:
           CORE_REPO_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
         run: git config --global url."https://x-access-token:${CORE_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
-      - name: Install
+      - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[test]"
-      - name: Test
-        run: pytest -q --ignore=tests/cross_service
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run backend security tests
+        env:
+          DEBUG: "true"
+        run: |
+          mkdir -p artifacts/backend/security
+          pytest tests/security/ -v \
+            --junitxml=artifacts/backend/security/junit.xml
+      - name: Collect generated SARIF
+        if: always()
+        run: |
+          mkdir -p artifacts/backend/security/sarif
+          find . -type f \( -name "*.sarif" -o -name "*.sarif.json" \) \
+            -not -path "./.git/*" \
+            -not -path "./artifacts/*" \
+            -print -exec cp --parents {} artifacts/backend/security/sarif/ \;
+      # CI-1: every uploaded SARIF must be structurally schema-valid (SARIF 2.1.0):
+      # version, $schema, runs[].tool.driver.name, and runs[].results[] must exist.
+      - name: Validate SARIF structure (CI-1)
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
 
-  docker-build:
-    name: Docker image builds
+          sarif_files = sorted(Path("artifacts/backend/security/sarif").rglob("*.sarif")) + sorted(
+              Path("artifacts/backend/security/sarif").rglob("*.sarif.json")
+          )
+          errors = []
+          for path in sarif_files:
+              try:
+                  doc = json.loads(path.read_text(encoding="utf-8"))
+              except (OSError, ValueError) as exc:
+                  errors.append(f"{path}: not valid JSON ({exc})")
+                  continue
+              if doc.get("version") != "2.1.0":
+                  errors.append(f"{path}: version must be '2.1.0', got {doc.get('version')!r}")
+              if not str(doc.get("$schema") or "").endswith("sarif-schema-2.1.0.json"):
+                  errors.append(f"{path}: $schema must reference the SARIF 2.1.0 schema")
+              runs = doc.get("runs")
+              if not isinstance(runs, list) or not runs:
+                  errors.append(f"{path}: runs[] must be a non-empty array")
+                  continue
+              for i, run in enumerate(runs):
+                  driver = (run.get("tool") or {}).get("driver") or {}
+                  if not str(driver.get("name") or "").strip():
+                      errors.append(f"{path}: runs[{i}].tool.driver.name is required")
+                  if not isinstance(run.get("results"), list):
+                      errors.append(f"{path}: runs[{i}].results must be an array")
+          for err in errors:
+              print(err, file=sys.stderr)
+          if errors:
+              sys.exit(f"SARIF validation failed for {len(errors)} finding(s)")
+          print(f"Validated {len(sarif_files)} SARIF file(s)")
+          PY
+      - name: Verify backend security evidence
+        if: always()
+        run: |
+          test -s artifacts/backend/security/junit.xml
+      # CI-1: retain test evidence, SARIF, and deployment manifests together so a
+      # release can be reconstructed from one artifact bundle.
+      - name: Upload backend security artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-security-junit-sarif
+          path: artifacts/backend/security
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload deployment manifests with security evidence (CI-1)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: deployment-manifests
+          path: |
+            k8s/
+            infra/helm/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload SARIF to code scanning
+        if: ${{ always() && hashFiles('artifacts/backend/security/sarif/**/*.sarif', 'artifacts/backend/security/sarif/**/*.sarif.json') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3 (2026-09-24)
+        with:
+          sarif_file: artifacts/backend/security/sarif
+
+  backend-ci-gates:
+    name: Backend CI/CD gate accountability
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: api_security
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d api_security"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Build image (Dockerfile)
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Let pip read the private sentinel-core repo
         env:
-          DOCKER_BUILDKIT: "1"
           CORE_REPO_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
+        run: git config --global url."https://x-access-token:${CORE_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Install backend dependencies
         run: |
-          printf '%s' "$CORE_REPO_TOKEN" > /tmp/gh_token
-          docker build --secret id=gh_token,src=/tmp/gh_token -f Dockerfile -t api-sentinel-api:ci .
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run strict CI/CD gate tests
+        env:
+          DEBUG: "true"
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/api_security
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          mkdir -p artifacts/backend/ci-gates
+          pytest \
+            tests/unit/test_cicd_quality_gate.py \
+            tests/unit/test_external_engine_runtime_readiness.py \
+            tests/unit/test_pentest_execution_artifacts.py \
+            tests/integration/test_cicd_gate.py \
+            -v \
+            --asyncio-mode=auto \
+            --junitxml=artifacts/backend/ci-gates/junit.xml
+      - name: Verify CI/CD gate evidence and policy packs
+        if: always()
+        run: |
+          test -s artifacts/backend/ci-gates/junit.xml
+          python - <<'PY'
+          from server.modules.cicd.policy_packs import resolve_policy_pack
+
+          required_controls = (
+              "require_evidence_integrity",
+              "require_evidence_completeness",
+              "require_safety_policies",
+              "require_retest_support",
+              "require_engine_artifact_accountability",
+          )
+          for pack_name in ("strict", "llm-strict"):
+              pack = resolve_policy_pack(pack_name)
+              missing = [name for name in required_controls if pack.get(name) is not True]
+              if missing:
+                  raise SystemExit(f"{pack_name} policy pack missing controls: {missing}")
+          if resolve_policy_pack("strict").get("fail_on") != "CRITICAL,HIGH":
+              raise SystemExit("strict policy pack must fail on CRITICAL,HIGH")
+          if resolve_policy_pack("llm-strict").get("require_llm_judge_validation") is not True:
+              raise SystemExit("llm-strict policy pack must require deterministic LLM judge validation")
+          PY
+      - name: Upload CI/CD gate artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-cicd-gate-junit
+          path: artifacts/backend/ci-gates
+          if-no-files-found: error
+          retention-days: 14
+
+  backend-e2e-api:
+    name: Backend E2E/API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Let pip read the private sentinel-core repo
+        env:
+          CORE_REPO_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
+        run: git config --global url."https://x-access-token:${CORE_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Run backend E2E/API tests
+        env:
+          DEBUG: "true"
+          PENTEST_ALLOW_PRIVATE_TARGETS: "true"
+          PENTEST_TARGET_ALLOWLIST: "127.0.0.1,localhost"
+        run: |
+          mkdir -p artifacts/backend/e2e-api
+          pytest tests/e2e/ -v \
+            --junitxml=artifacts/backend/e2e-api/junit.xml
+      - name: Verify backend E2E/API evidence
+        if: always()
+        run: |
+          test -s artifacts/backend/e2e-api/junit.xml
+      - name: Upload backend E2E/API artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-e2e-api-junit
+          path: artifacts/backend/e2e-api
+          if-no-files-found: error
+          retention-days: 14
+
+  dependency-secret-scan:
+    name: Dependency and secret scanning (CI-3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Let pip read the private sentinel-core repo
+        env:
+          CORE_REPO_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
+        run: git config --global url."https://x-access-token:${CORE_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Install runtime and pip-audit
+        run: |
+          python -m pip install --upgrade pip "pip-audit==2.10.1"
+          pip install -r requirements.txt
+          mkdir -p artifacts/security
+          pip freeze --exclude sentinel-core > artifacts/security/resolved-runtime.txt
+      - name: Audit runtime dependencies (sentinel-core is audited in its own repo)
+        run: |
+          python -m pip_audit --strict -r artifacts/security/resolved-runtime.txt --format json             --output artifacts/security/pip-audit-runtime.json
+      # Gitleaks pinned by checksum (CI-2/CI-3). v8.30.1 linux_x64 sha256:
+      # 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+      - name: Install gitleaks (checksum-pinned)
+        run: |
+          curl -fsSL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" \
+            -o /tmp/gitleaks.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          install -m 0755 <(tar -xzf /tmp/gitleaks.tar.gz -O gitleaks) /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan for secrets
+        run: |
+          gitleaks detect --source . --redact \
+            --report-path artifacts/security/gitleaks-report.json
+      - name: Upload dependency and secret scan artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dependency-secret-scan
+          path: artifacts/security
+          if-no-files-found: warn
+          retention-days: 14
+
+  ci-required:
+    name: CI required checks
+    runs-on: ubuntu-latest
+    needs:
+      - backend-unit
+      - backend-integration
+      - backend-security
+      - backend-ci-gates
+      - backend-e2e-api
+      - dependency-secret-scan
+    if: always()
+    steps:
+      - name: Fail if any required job failed
+        run: |
+          cat > ci-results.txt <<'EOF'
+          backend-unit ${{ needs.backend-unit.result }}
+          backend-integration ${{ needs.backend-integration.result }}
+          backend-security ${{ needs.backend-security.result }}
+          backend-ci-gates ${{ needs.backend-ci-gates.result }}
+          backend-e2e-api ${{ needs.backend-e2e-api.result }}
+          dependency-secret-scan ${{ needs.dependency-secret-scan.result }}
+          EOF
+
+          failed=0
+          while read -r job result; do
+            echo "$job: $result"
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done < ci-results.txt
+
+          exit "$failed"
