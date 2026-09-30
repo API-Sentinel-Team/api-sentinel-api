@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from server.models.core import APIEndpoint, PolicyViolation, TestRun, Vulnerability
+from sentinel_core.models.core import APIEndpoint, PolicyViolation, TestRun, Vulnerability
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

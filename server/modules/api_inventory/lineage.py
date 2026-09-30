@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import (
+from sentinel_core.models.core import (
     APIEndpoint,
     EndpointRevision,
     EvidenceRecord,
@@ -18,7 +18,7 @@ from server.models.core import (
     TestResult,
     Vulnerability,
 )
-from server.modules.utils.finding_fingerprint import (
+from sentinel_core.modules.utils.finding_fingerprint import (
     nuclei_fingerprint,
     source_finding_fingerprint,
     vulnerability_fingerprint,

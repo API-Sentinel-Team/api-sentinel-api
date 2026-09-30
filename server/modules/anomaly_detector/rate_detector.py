@@ -5,7 +5,7 @@ Uses SQLite time-series queries instead of Redis for simplicity.
 import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from server.models.core import RequestLog
+from sentinel_core.models.core import RequestLog
 
 
 def _utc_now() -> datetime.datetime:

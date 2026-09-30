@@ -1,6 +1,6 @@
 import pytest
 
-from server.models.core import APIEndpoint, WAFEvent
+from sentinel_core.models.core import APIEndpoint, WAFEvent
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import Sensor
+from sentinel_core.models.core import Sensor
 from server.modules.auth.rbac import Permission, RBAC, require_admin
-from server.modules.persistence.database import AsyncSessionLocal, get_db
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, get_db
 from server.modules.sensors.keys import generate_sensor_key, hash_sensor_key, resolve_sensor_by_key
 
 router = APIRouter()

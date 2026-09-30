@@ -11,8 +11,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import ActorBaseline, ActorProfile, DetectionObjectState, ThreatActor
+from sentinel_core.config import settings
+from sentinel_core.models.core import ActorBaseline, ActorProfile, DetectionObjectState, ThreatActor
 from server.modules.cache.redis_cache import get_json, set_json
 
 from .models import DetectionEnvelope, DetectionSignal

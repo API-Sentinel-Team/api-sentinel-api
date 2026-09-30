@@ -10,7 +10,7 @@ import datetime
 
 import pytest
 
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.pentest.runtime_facts import (
     collect_runtime_facts,
     worker_heartbeat_max_age_seconds,
@@ -248,7 +248,7 @@ async def test_runtime_facts_count_persisted_audit_entries(db_session):
 
 def test_worker_heartbeat_max_age_defaults_to_a_positive_window(monkeypatch):
     assert worker_heartbeat_max_age_seconds() > 0
-    monkeypatch.setattr("server.config.settings.PENTEST_SCAN_WORKER_HEARTBEAT_MAX_AGE_SECONDS", 42)
+    monkeypatch.setattr("sentinel_core.config.settings.PENTEST_SCAN_WORKER_HEARTBEAT_MAX_AGE_SECONDS", 42)
     assert worker_heartbeat_max_age_seconds() == 42
-    monkeypatch.setattr("server.config.settings.PENTEST_SCAN_WORKER_HEARTBEAT_MAX_AGE_SECONDS", 0)
+    monkeypatch.setattr("sentinel_core.config.settings.PENTEST_SCAN_WORKER_HEARTBEAT_MAX_AGE_SECONDS", 0)
     assert worker_heartbeat_max_age_seconds() > 0

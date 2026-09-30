@@ -2,9 +2,9 @@ import asyncio
 import pytest
 from sqlalchemy import select
 
-from server.config import settings
+from sentinel_core.config import settings
 from server.modules.detection.engine import detect_api_behavior, update_actor_profile
-from server.models.core import ActorProfile, Alert, EvidenceRecord
+from sentinel_core.models.core import ActorProfile, Alert, EvidenceRecord
 
 @pytest.mark.asyncio
 async def test_actor_profile_creation(db_session):

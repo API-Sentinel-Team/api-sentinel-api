@@ -3,10 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.auth.rbac import Permission, RBAC
-from server.models.core import TestAccount
-from server.modules.identity.test_account_secrets import TestAccountSecretCodec
+from sentinel_core.models.core import TestAccount
+from sentinel_core.modules.identity.test_account_secrets import TestAccountSecretCodec
 
 router = APIRouter()
 

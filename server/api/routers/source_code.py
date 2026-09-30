@@ -15,16 +15,16 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import APIEndpoint, SourceCodeFinding, SourceCodeRepo
-from server.modules.auth.encryption import Encryption
+from sentinel_core.config import settings
+from sentinel_core.models.core import APIEndpoint, SourceCodeFinding, SourceCodeRepo
+from sentinel_core.modules.auth.encryption import Encryption
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.pentest.target_policy import build_target_guard_policy
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.pentest.target_policy import build_target_guard_policy
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.source_code_analyzer.scanner import scan_directory
-from server.modules.test_executor.target_guard import TargetGuard, TargetGuardError
-from server.modules.utils.finding_fingerprint import source_finding_fingerprint
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.test_executor.target_guard import TargetGuard, TargetGuardError
+from sentinel_core.modules.utils.finding_fingerprint import source_finding_fingerprint
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.validation.input_validator import InputValidator, ValidationError
 
 router = APIRouter(tags=["Source Code Analysis"])

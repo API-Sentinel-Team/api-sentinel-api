@@ -6,11 +6,11 @@ from typing import Dict, Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import MLModelRun, Alert, EvidenceRecord
+from sentinel_core.config import settings
+from sentinel_core.models.core import MLModelRun, Alert, EvidenceRecord
 from server.modules.evidence.package import save_evidence_package
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
 
 
 def _score_simple(features: Dict[str, Any]) -> float:

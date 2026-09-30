@@ -8,11 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
-from server.modules.recon.scheduler import ReconSourceRunner
-from server.modules.recon.secrets import ReconSourceSecretCodec
-from server.models.core import ReconSourceConfig
-from server.config import settings
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.recon.source_runner import ReconSourceRunner
+from sentinel_core.modules.recon.secrets import ReconSourceSecretCodec
+from sentinel_core.models.core import ReconSourceConfig
+from sentinel_core.config import settings
 
 router = APIRouter(tags=["recon"])
 _runner = ReconSourceRunner()

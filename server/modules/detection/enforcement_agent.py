@@ -5,10 +5,10 @@ import uuid
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import BlockedIP, ResponseActionLog
+from sentinel_core.config import settings
+from sentinel_core.models.core import BlockedIP, ResponseActionLog
 from server.modules.cache.redis_cache import delete
-from server.modules.enforcement.engine import circuit_breaker, rate_limit_override, token_invalidate
+from sentinel_core.modules.enforcement.engine import circuit_breaker, rate_limit_override, token_invalidate
 
 from .models import DetectionEnvelope, EnforcementAction, IncidentDecision
 

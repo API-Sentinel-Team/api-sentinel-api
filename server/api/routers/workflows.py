@@ -9,17 +9,17 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import APIWorkflow, APIWorkflowRun, AuthProfile
+from sentinel_core.models.core import APIWorkflow, APIWorkflowRun, AuthProfile
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.pentest.auth_material import first_auth_header_value, present
-from server.modules.pentest.auth_preflight import auth_profile_has_runtime_material
-from server.modules.pentest.auth_profile_secrets import AuthProfileSecretCodec
-from server.modules.pentest.auth_scope import AuthScopeError, auth_scope_policy_for_error, validate_auth_profile_scope
-from server.modules.pentest.target_policy import target_guard_policy_for_error, validate_pentest_target
-from server.modules.persistence.database import get_db
-from server.modules.test_executor.kill_switch import KILL_SWITCH_REASON, kill_switch_enabled
-from server.modules.test_executor.target_guard import TargetGuardError
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.pentest.auth_material import first_auth_header_value, present
+from sentinel_core.modules.pentest.auth_preflight import auth_profile_has_runtime_material
+from sentinel_core.modules.pentest.auth_profile_secrets import AuthProfileSecretCodec
+from sentinel_core.modules.pentest.auth_scope import AuthScopeError, auth_scope_policy_for_error, validate_auth_profile_scope
+from sentinel_core.modules.pentest.target_policy import target_guard_policy_for_error, validate_pentest_target
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.test_executor.kill_switch import KILL_SWITCH_REASON, kill_switch_enabled
+from sentinel_core.modules.test_executor.target_guard import TargetGuardError
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.workflows.executor import WorkflowExecutor
 
 router = APIRouter(tags=["API Workflows"])

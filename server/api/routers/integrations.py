@@ -9,29 +9,29 @@ from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, Q
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 
-from server.modules.persistence.database import get_db
-from server.models.core import Integration
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.models.core import Integration
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.integrations.slack_client import SlackClient
-from server.modules.integrations.jira_client import JiraClient
-from server.modules.integrations.splunk_client import SplunkClient
-from server.modules.integrations.datadog_client import DatadogClient
-from server.modules.integrations.azure_boards_client import AzureBoardsClient
-from server.modules.integrations.pagerduty_client import PagerDutyClient
-from server.modules.integrations.webhook_client import WebhookClient
-from server.modules.integrations.sentinel_client import SentinelClient
-from server.modules.integrations.qradar_client import QRadarClient
-from server.modules.integrations.elastic_client import ElasticClient
-from server.modules.integrations.chronicle_client import ChronicleClient
-from server.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.integrations.slack_client import SlackClient
+from sentinel_core.modules.integrations.jira_client import JiraClient
+from sentinel_core.modules.integrations.splunk_client import SplunkClient
+from sentinel_core.modules.integrations.datadog_client import DatadogClient
+from sentinel_core.modules.integrations.azure_boards_client import AzureBoardsClient
+from sentinel_core.modules.integrations.pagerduty_client import PagerDutyClient
+from sentinel_core.modules.integrations.webhook_client import WebhookClient
+from sentinel_core.modules.integrations.sentinel_client import SentinelClient
+from sentinel_core.modules.integrations.qradar_client import QRadarClient
+from sentinel_core.modules.integrations.elastic_client import ElasticClient
+from sentinel_core.modules.integrations.chronicle_client import ChronicleClient
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
 from server.modules.integrations.postman_importer import PostmanImporter
 from server.modules.integrations.burp_importer import BurpImporter
-from server.modules.integrations.destination_guard import (
+from sentinel_core.modules.integrations.destination_guard import (
     IntegrationDestinationError,
     validate_integration_destination_config,
 )
-from server.modules.integrations.secrets import IntegrationSecretCodec
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.integrations.secrets import IntegrationSecretCodec
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.validation.input_validator import InputValidator, ValidationError
 import logging
 
@@ -404,7 +404,7 @@ async def import_postman(
         raise HTTPException(400, f"Invalid JSON: {e}")
 
     endpoints_data = PostmanImporter.parse_collection(data, account_id=account_id, collection_id=collection_id)
-    from server.models.core import APIEndpoint
+    from sentinel_core.models.core import APIEndpoint
     for ep_data in endpoints_data:
         db.add(APIEndpoint(id=str(uuid.uuid4()), **ep_data))
     await db.commit()
@@ -427,7 +427,7 @@ async def import_burp(
 
     account_id = payload.get("account_id")
     parsed = BurpImporter.parse_xml(xml_content, account_id=account_id, collection_id=collection_id)
-    from server.models.core import APIEndpoint, SampleData
+    from sentinel_core.models.core import APIEndpoint, SampleData
     for ep_data in parsed["endpoints"]:
         db.add(APIEndpoint(id=str(uuid.uuid4()), **ep_data))
     for sd in parsed["sample_data"]:

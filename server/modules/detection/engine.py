@@ -7,11 +7,11 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import ActorProfile, Alert, EvidenceRecord
+from sentinel_core.config import settings
+from sentinel_core.models.core import ActorProfile, Alert, EvidenceRecord
 from server.modules.evidence.package import save_evidence_package
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
 from server.modules.response.incident_orchestrator import handle_incident
 from server.modules.detection.pipeline import unified_detection_pipeline
 from server.modules.ingestion.redaction import redact_ingestion_path

@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from server.models.core import APICollection, APIEndpoint, RequestLog, Sensor
+from sentinel_core.models.core import APICollection, APIEndpoint, RequestLog, Sensor
 from server.modules.sensors.keys import hash_sensor_key
 
 

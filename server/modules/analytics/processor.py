@@ -7,10 +7,10 @@ import logging
 
 from sqlalchemy import select
 
-from server.models.core import Account
-from server.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
+from sentinel_core.models.core import Account
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
 from server.modules.analytics.aggregator import aggregate_hourly, aggregate_alerts_daily
-from server.modules.tenancy.context import set_current_account_id
+from sentinel_core.modules.tenancy.context import set_current_account_id
 
 logger = logging.getLogger(__name__)
 

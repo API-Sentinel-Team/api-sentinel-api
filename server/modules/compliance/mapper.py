@@ -6,7 +6,7 @@ Maps vulnerability categories to compliance frameworks:
 """
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from server.models.core import Vulnerability
+from sentinel_core.models.core import Vulnerability
 
 
 # ── OWASP API Top 10 (2023) ─────────────────────────────────────────────────

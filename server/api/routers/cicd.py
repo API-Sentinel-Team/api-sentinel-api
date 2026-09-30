@@ -14,21 +14,21 @@ from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import AuthProfile, CICDTrigger, PentestArtifact, PentestProfile, TestResult, TestRun, Vulnerability
-from server.modules.auth.audit import log_action
+from sentinel_core.config import settings
+from sentinel_core.models.core import AuthProfile, CICDTrigger, PentestArtifact, PentestProfile, TestResult, TestRun, Vulnerability
+from sentinel_core.modules.auth.audit import log_action
 from server.modules.auth.rbac import Permission, RBAC, can_trigger_cicd
 from server.modules.cicd.policy_packs import available_policy_packs, resolve_policy_pack
 from server.modules.cicd.quality_gate import attach_decision_integrity, evaluate_quality_gate, parse_fail_on
-from server.modules.pentest.auth_preflight import auth_profile_has_runtime_material
-from server.modules.pentest.auth_scope import AuthScopeError, auth_scope_policy_for_error, validate_auth_profile_scope
-from server.modules.pentest.target_policy import target_guard_policy_for_error, validate_pentest_target
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.pentest.auth_preflight import auth_profile_has_runtime_material
+from sentinel_core.modules.pentest.auth_scope import AuthScopeError, auth_scope_policy_for_error, validate_auth_profile_scope
+from sentinel_core.modules.pentest.target_policy import target_guard_policy_for_error, validate_pentest_target
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.quotas.tenant_quota import QuotaStatus, check_cicd_gate_quota
 from server.modules.test_executor.reporting import build_junit, build_report_artifact_manifest, build_sarif
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.validation.input_validator import InputValidator, ValidationError
-from server.modules.vulnerability_detector.lifecycle import (
+from sentinel_core.modules.vulnerability_detector.lifecycle import (
     confirmation_status_from_evidence,
     latest_ticket_sync,
     vulnerability_sla_status,
@@ -1467,7 +1467,7 @@ async def manual_trigger(
     try:
         validate_pentest_target(target_url)
     except Exception as exc:
-        from server.modules.test_executor.target_guard import TargetGuardError
+        from sentinel_core.modules.test_executor.target_guard import TargetGuardError
 
         if isinstance(exc, TargetGuardError):
             raise _message_exception(

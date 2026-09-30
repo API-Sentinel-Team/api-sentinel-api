@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from server.models.core import Alert, AuditLog, IngestionJob, MaliciousEventRecord, RequestLog, Sensor
+from sentinel_core.models.core import Alert, AuditLog, IngestionJob, MaliciousEventRecord, RequestLog, Sensor
 from server.modules.sensors.keys import hash_sensor_key
 
 

@@ -3,7 +3,7 @@ import base64
 import pytest
 from sqlalchemy import func, select
 
-from server.models.core import APIEndpoint, SampleData
+from sentinel_core.models.core import APIEndpoint, SampleData
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

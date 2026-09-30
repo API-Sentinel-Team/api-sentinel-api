@@ -15,16 +15,16 @@ from urllib.parse import urlparse, unquote
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from server.config import settings
-from server.modules.persistence.database import get_db
-from server.modules.traffic_capture.sample_data_writer import SampleDataWriter
+from sentinel_core.config import settings
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.traffic_capture.sample_data_writer import SampleDataWriter
 from server.modules.traffic_capture.flow_processor import persist_captured_flow
 from server.modules.parsers.postman import PostmanParser
-from server.modules.api_inventory.openapi_generator import OpenAPIGenerator
+from sentinel_core.modules.api_inventory.openapi_generator import OpenAPIGenerator
 from server.modules.cache.redis_cache import bump_cache_version
 from server.modules.detection.pipeline import unified_detection_pipeline
 from server.modules.auth.rbac import RBAC, Permission
-from server.models.core import (
+from sentinel_core.models.core import (
     APIEndpoint, SampleData, RequestLog,
     MaliciousEventRecord, MaliciousEvent, ThreatActor, WAFEvent,
 )

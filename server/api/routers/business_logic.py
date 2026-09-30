@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db, get_read_db
-from server.modules.business_logic.graph_builder import build_graph, get_latest_graph
-from server.modules.utils.redactor import Redactor
-from server.models.core import BusinessLogicViolation
+from sentinel_core.modules.persistence.database import get_db, get_read_db
+from sentinel_core.modules.business_logic.graph_builder import build_graph, get_latest_graph
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.models.core import BusinessLogicViolation
 
 router = APIRouter(tags=["Business Logic"])
 

@@ -4,9 +4,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from server.api.main import app
 from server.api.rate_limiter import limiter
-from server.modules.persistence.database import get_db, get_read_db
-from server.models import Base
-from server.config import settings
+from sentinel_core.modules.persistence.database import get_db, get_read_db
+from sentinel_core.models import Base
+from sentinel_core.config import settings
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 # Use an in-memory database for tests

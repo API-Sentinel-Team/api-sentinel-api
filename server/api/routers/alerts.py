@@ -8,12 +8,12 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import Alert
+from sentinel_core.models.core import Alert
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.persistence.database import get_db
-from server.modules.response.playbook_executor import execute_playbooks
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.modules.utils.redactor import Redactor
 
 router = APIRouter()
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import Dict, Any, AsyncIterator, Optional, Set
 
-from server.config import settings
+from sentinel_core.config import settings
 from server.modules.streaming.kafka_bus import KafkaEventBus, KafkaUnavailableError
 
 

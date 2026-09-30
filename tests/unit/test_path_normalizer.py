@@ -1,5 +1,5 @@
 from server.modules.api_inventory.endpoint_discovery import inventory_path
-from server.modules.api_inventory.path_normalizer import PathNormalizer
+from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 
 
 def test_normalize_collapses_oci_blob_digest():

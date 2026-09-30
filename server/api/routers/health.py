@@ -11,11 +11,11 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import APIEndpoint, MaliciousEventRecord, ThreatActor, Vulnerability
+from sentinel_core.config import settings
+from sentinel_core.models.core import APIEndpoint, MaliciousEventRecord, ThreatActor, Vulnerability
 from server.modules.auth.rbac import require_admin
-from server.modules.persistence.database import get_db
-from server.modules.test_executor.wordlist_manager import WordlistManager
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.test_executor.wordlist_manager import WordlistManager
 
 router = APIRouter()
 

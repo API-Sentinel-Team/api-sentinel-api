@@ -16,12 +16,12 @@ from sqlalchemy.future import select
 from sqlalchemy import func, update, delete, and_, or_, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.auth.rbac import Permission, RBAC
 from server.modules.ingestion.queue import ingestion_queue, IngestionJobItem
 from server.modules.quotas.tenant_quota import check_ingest_quota
-from server.modules.utils.redactor import Redactor
-from server.models.core import (
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.models.core import (
     IngestionJob, MaliciousEventRecord, AgenticSession, ThreatConfig,
     ThreatActor, MaliciousEvent, RequestLog,
 )

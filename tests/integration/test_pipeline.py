@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient
-from server.models import core as models
+from sentinel_core.models import core as models
 
 
 async def _auth_ready_pentest_profile(db_session, *, account_id: int) -> models.PentestProfile:

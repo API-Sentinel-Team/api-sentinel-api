@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from server.config import settings
+from sentinel_core.config import settings
 
 # When the sensor omits Host, these paths are still this console — not a customer API.
 _CONSOLE_PATH_PREFIXES = (

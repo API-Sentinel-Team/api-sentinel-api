@@ -5,14 +5,14 @@ import hmac
 import json
 from typing import Iterable
 
-from server.config import settings
-from server.models.core import TestResult, TestRun
-from server.modules.pentest.execution_artifacts import (
+from sentinel_core.config import settings
+from sentinel_core.models.core import TestResult, TestRun
+from sentinel_core.modules.pentest.execution_artifacts import (
     artifact_content_governance_summary,
     verify_execution_artifact_payload,
 )
-from server.modules.utils.redactor import Redactor
-from server.modules.vulnerability_detector.lifecycle import (
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.modules.vulnerability_detector.lifecycle import (
     confirmation_result_from_evidence,
     verify_vulnerability_evidence,
 )

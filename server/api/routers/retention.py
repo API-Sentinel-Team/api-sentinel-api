@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends, Body, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from server.models.core import TenantRetentionPolicy
-from server.modules.auth.audit import log_action
+from sentinel_core.models.core import TenantRetentionPolicy
+from sentinel_core.modules.auth.audit import log_action
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.privacy.retention import invalidate_retention_policy, get_retention_policy
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 
 router = APIRouter(tags=["Retention"])
 

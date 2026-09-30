@@ -15,7 +15,7 @@ import datetime
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import (
+from sentinel_core.models.core import (
     BlockedIP,
     RateLimitOverride,
     ThreatActor,
@@ -27,7 +27,7 @@ from server.models.core import (
 )
 from server.modules.detection.correlation_engine import correlate_threat
 from server.modules.response.incident_orchestrator import handle_incident
-from server.modules.response.default_playbooks import ensure_default_playbooks
+from sentinel_core.modules.response.default_playbooks import ensure_default_playbooks
 from server.api.websocket.event_types import WSEventType
 
 

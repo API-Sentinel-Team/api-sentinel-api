@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.compliance.report_generator import ComplianceReportGenerator
 from server.modules.compliance.mapper import ComplianceMapper
 from server.modules.compliance.pdf_renderer import PDFRenderer

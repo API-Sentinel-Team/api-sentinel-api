@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
-from server.modules.storage.archiver import archive_once
-from server.config import settings
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.storage.archiver import archive_once
+from sentinel_core.config import settings
 
 router = APIRouter(tags=["Storage"])
 

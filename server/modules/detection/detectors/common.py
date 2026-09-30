@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from server.config import settings
+from sentinel_core.config import settings
 
 from ..models import DetectionEnvelope, DetectionSignal
 

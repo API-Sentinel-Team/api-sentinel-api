@@ -9,15 +9,15 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import ResponseActionLog, ResponsePlaybook
+from sentinel_core.models.core import ResponseActionLog, ResponsePlaybook
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.integrations.destination_guard import (
+from sentinel_core.modules.integrations.destination_guard import (
     IntegrationDestinationError,
     validate_integration_destination_config,
 )
-from server.modules.persistence.database import get_db
-from server.modules.response.playbook_secrets import PlaybookActionSecretCodec
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.response.playbook_secrets import PlaybookActionSecretCodec
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.validation.input_validator import InputValidator, ValidationError
 
 router = APIRouter(tags=["Response Playbooks"])

@@ -8,7 +8,7 @@ from typing import Iterable, Tuple, Dict, Any
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import (
+from sentinel_core.models.core import (
     RequestLog,
     Alert,
     EndpointMetricHourly,

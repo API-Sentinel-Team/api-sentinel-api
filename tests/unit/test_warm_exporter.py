@@ -3,7 +3,7 @@ import datetime
 import pytest
 from sqlalchemy import select
 
-from server.models.core import WarmExportCursor
+from sentinel_core.models.core import WarmExportCursor
 from server.modules.storage.warm_exporter import WarmStoreExporter
 
 

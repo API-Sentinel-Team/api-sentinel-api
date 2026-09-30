@@ -3,10 +3,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import APIEndpoint, WAFEvent
+from sentinel_core.models.core import APIEndpoint, WAFEvent
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.utils.redactor import Redactor
 
 router = APIRouter()
 

@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from server.api.routers import alerts as alerts_router
-from server.models.core import Alert
+from sentinel_core.models.core import Alert
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

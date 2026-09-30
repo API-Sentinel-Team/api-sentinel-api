@@ -3,19 +3,19 @@ import httpx
 import logging
 from typing import Dict, Any, List, Optional
 
-from server.modules.pentest.auth_scope import (
+from sentinel_core.modules.pentest.auth_scope import (
     AuthScopeError,
     auth_scope_policy_for_error,
     validate_auth_profile_scope,
 )
-from server.modules.pentest.target_policy import build_target_guard_policy
-from server.modules.test_executor.state_change_guard import (
+from sentinel_core.modules.pentest.target_policy import build_target_guard_policy
+from sentinel_core.modules.test_executor.state_change_guard import (
     StateChangeBlocked,
     StateChangeGuard,
     state_change_policy_for_request,
 )
-from server.modules.test_executor.target_guard import TargetGuard, TargetGuardError
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.test_executor.target_guard import TargetGuard, TargetGuardError
+from sentinel_core.modules.utils.redactor import Redactor
 
 logger = logging.getLogger(__name__)
 

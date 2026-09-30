@@ -4,7 +4,7 @@ import json
 import re
 from typing import Any
 
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 
 _HEADER_KEYS = {"headers", "request_headers", "response_headers"}
 _SENSITIVE_KEY_PARTS = {"password", "secret", "token", "key", "auth", "cvv", "credit_card", "cookie"}

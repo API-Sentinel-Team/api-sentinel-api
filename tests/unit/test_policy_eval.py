@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from server.models.core import GovernanceRule, APIEndpoint, PolicyViolation
+from sentinel_core.models.core import GovernanceRule, APIEndpoint, PolicyViolation
 from server.modules.ingestion.processors import _apply_governance_rules
 
 

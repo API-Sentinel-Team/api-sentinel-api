@@ -4,8 +4,8 @@ from typing import Dict, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import TenantRetentionPolicy
-from server.modules.utils.redactor import Redactor
+from sentinel_core.models.core import TenantRetentionPolicy
+from sentinel_core.modules.utils.redactor import Redactor
 
 _CACHE: dict[int, Dict[str, Any]] = {}
 _CACHE_TTL_SECONDS = 60

@@ -12,11 +12,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from server.models.core import APIEndpoint, BlockedIP, EndpointBlock, RateLimitOverride
-from server.modules.api_inventory.path_normalizer import PathNormalizer
+from sentinel_core.models.core import APIEndpoint, BlockedIP, EndpointBlock, RateLimitOverride
+from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 from server.modules.auth.jwt_issuer import JWTIssuer
 from server.modules.cache import redis_cache
-from server.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 

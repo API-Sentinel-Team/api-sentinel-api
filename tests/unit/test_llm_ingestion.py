@@ -3,10 +3,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import server.modules.ingestion.processors as processors
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.ingestion.processors import process_event_batch
 from server.modules.ingestion.schema import APIRequest, APIResponse, APITrafficEvent, EventBatch
-from server.modules.vulnerability_detector.lifecycle import verify_vulnerability_evidence
+from sentinel_core.modules.vulnerability_detector.lifecycle import verify_vulnerability_evidence
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
-from server.modules.identity.authorization_replay import auth_headers_for_account
-from server.modules.identity.test_account_secrets import TestAccountSecretCodec
+from sentinel_core.models import core as models
+from sentinel_core.modules.identity.authorization_replay import auth_headers_for_account
+from sentinel_core.modules.identity.test_account_secrets import TestAccountSecretCodec
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,7 @@ from typing import Dict, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import ActorBaseline
+from sentinel_core.models.core import ActorBaseline
 
 
 async def upsert_actor_baseline(

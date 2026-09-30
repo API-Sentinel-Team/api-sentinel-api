@@ -7,13 +7,13 @@ from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, EmailStr, field_validator
 
-from server.config import settings
-from server.modules.persistence.database import get_db
-from server.models.core import User, Account
+from sentinel_core.config import settings
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.models.core import User, Account
 from server.modules.auth.password_hasher import PasswordHasher
 from server.modules.auth.jwt_issuer import JWTIssuer
 from server.modules.auth.rbac import RBAC, require_admin
-from server.modules.auth.audit import log_action
+from sentinel_core.modules.auth.audit import log_action
 from server.modules.auth.auth_rate_limiter import AuthRateLimiter
 from server.modules.auth.client_ip import get_client_ip
 from server.modules.validation.input_validator import InputValidator, ValidationError

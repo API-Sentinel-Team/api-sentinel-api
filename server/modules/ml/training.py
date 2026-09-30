@@ -11,8 +11,8 @@ from sklearn.ensemble import IsolationForest
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import MLModel, MLModelEvaluation
+from sentinel_core.config import settings
+from sentinel_core.models.core import MLModel, MLModelEvaluation
 from server.modules.ml.datasets import load_feature_dataset
 
 

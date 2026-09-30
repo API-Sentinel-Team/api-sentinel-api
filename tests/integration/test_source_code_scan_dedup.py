@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from server.models.core import APIEndpoint, SourceCodeRepo
+from sentinel_core.models.core import APIEndpoint, SourceCodeRepo
 
 
 @pytest.mark.asyncio

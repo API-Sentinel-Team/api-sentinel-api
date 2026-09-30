@@ -7,8 +7,8 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import Sensor
+from sentinel_core.config import settings
+from sentinel_core.models.core import Sensor
 
 SENSOR_KEY_HASH_PREFIX = "hmac-sha256:"
 

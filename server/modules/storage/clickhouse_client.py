@@ -5,7 +5,7 @@ import httpx
 import logging
 from typing import Iterable, Dict, Any
 
-from server.config import settings
+from sentinel_core.config import settings
 
 logger = logging.getLogger(__name__)
 

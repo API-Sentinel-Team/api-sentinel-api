@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from sqlalchemy import insert, select, update, func
 
-from server.models.core import (
+from sentinel_core.models.core import (
     Alert,
     IngestionDeadLetter,
     IngestionJob,
@@ -28,7 +28,7 @@ from server.models.core import (
 )
 from server.modules.detection.engine import detect_api_behavior
 from server.modules.detection.pipeline import unified_detection_pipeline
-from server.modules.business_logic.graph_builder import detect_transition_violation
+from sentinel_core.modules.business_logic.graph_builder import detect_transition_violation
 from server.modules.cache.redis_cache import bump_cache_version
 from server.modules.ingestion.parsers import detect_attacks, parse_log_line
 from server.modules.ingestion.dead_letter import redact_dead_letter_error, redact_dead_letter_payload
@@ -36,20 +36,20 @@ from server.modules.ingestion.redaction import redact_ingestion_path
 from server.modules.ingestion.schema import EventUnion
 from pydantic import TypeAdapter
 from server.modules.ingestion.quality import compute_quality
-from server.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
-from server.modules.tenancy.context import set_current_account_id
-from server.api.websocket.manager import ws_manager
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
+from sentinel_core.modules.tenancy.context import set_current_account_id
+from sentinel_core.modules.events import publish_dashboard_event
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.privacy.retention import get_retention_policy, apply_retention_policy
-from server.modules.api_inventory.path_normalizer import PathNormalizer
+from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 from server.modules.vulnerability_detector.pii_scanner import PIIScanner
 from server.modules.streaming.event_bus import get_event_bus, tenant_topic, track_topic
-from server.modules.agentic.mcp_security import record_tool_invocation
-from server.modules.agentic.mcp_parser import parse_mcp_invocation
-from server.modules.llm.findings import persist_llm_api_findings
-from server.modules.passive.findings import persist_passive_attack_signal, persist_sensitive_data_exposure
-from server.modules.vulnerability_detector.store import create_or_merge_vulnerability
-from server.config import settings
+from sentinel_core.modules.agentic.mcp_security import record_tool_invocation
+from sentinel_core.modules.agentic.mcp_parser import parse_mcp_invocation
+from sentinel_core.modules.llm.findings import persist_llm_api_findings
+from sentinel_core.modules.passive.findings import persist_passive_attack_signal, persist_sensitive_data_exposure
+from sentinel_core.modules.vulnerability_detector.store import create_or_merge_vulnerability
+from sentinel_core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -386,10 +386,7 @@ async def process_stream_lines(job_id: str, account_id: int, payload: Dict[str, 
         await db.commit()
 
         for event_msg in events_for_ws:
-            try:
-                await ws_manager.broadcast(event_msg, account_id=account_id)
-            except Exception:
-                break
+            await publish_dashboard_event(event_msg, account_id=account_id)
 
     await bump_cache_version(account_id)
     await _update_job(

@@ -1,6 +1,6 @@
 import pytest
 
-from server.models.core import (
+from sentinel_core.models.core import (
     APIEndpoint,
     EndpointRevision,
     EvidenceRecord,

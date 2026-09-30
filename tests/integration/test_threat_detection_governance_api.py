@@ -4,7 +4,7 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from server.models.core import AgenticSession, MaliciousEventRecord
+from sentinel_core.models.core import AgenticSession, MaliciousEventRecord
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-from server.config import BASE_DIR, settings
-from server.models.core import EvidencePackage
-from server.modules.utils.redactor import Redactor
+from sentinel_core.config import BASE_DIR, settings
+from sentinel_core.models.core import EvidencePackage
+from sentinel_core.modules.utils.redactor import Redactor
 
 
 def _resolve_archive_path(account_id: int, detection_type: str, detection_id: str, digest: str) -> Path:

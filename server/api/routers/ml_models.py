@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.auth.rbac import RBAC
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.ml.model_registry import list_models, promote_model
 
 router = APIRouter(tags=["ML Models"])

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.anomaly_detector.rate_detector import RateDetector
 from server.modules.anomaly_detector.isolation_forest_scorer import IsolationForestScorer
-from server.models.core import RequestLog
+from sentinel_core.models.core import RequestLog
 
 router = APIRouter()
 _rate_detector = RateDetector()

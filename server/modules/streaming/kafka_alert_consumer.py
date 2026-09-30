@@ -11,12 +11,12 @@ try:
 except Exception:  # pragma: no cover
     AIOKafkaConsumer = None
 
-from server.config import settings
-from server.models.core import Alert, EvidenceRecord
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.response.playbook_executor import execute_playbooks
-from server.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
-from server.modules.tenancy.context import set_current_account_id
+from sentinel_core.config import settings
+from sentinel_core.models.core import Alert, EvidenceRecord
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
+from sentinel_core.modules.tenancy.context import set_current_account_id
 
 logger = logging.getLogger(__name__)
 

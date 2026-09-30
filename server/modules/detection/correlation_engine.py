@@ -9,9 +9,9 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.cache import redis_cache
-from server.config import settings
-from server.models.core import BlockedIP, MaliciousEvent, MaliciousEventRecord, ThreatActor
-from server.modules.api_inventory.endpoint_risk import endpoint_risk_multiplier
+from sentinel_core.config import settings
+from sentinel_core.models.core import BlockedIP, MaliciousEvent, MaliciousEventRecord, ThreatActor
+from sentinel_core.modules.api_inventory.endpoint_risk import endpoint_risk_multiplier
 
 from .correlation_agent import correlation_agent
 from .enforcement_agent import enforcement_agent

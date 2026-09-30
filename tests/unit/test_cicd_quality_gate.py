@@ -1,10 +1,10 @@
 import hashlib
 import json
 
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.cicd.policy_packs import resolve_policy_pack
-from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
-from server.modules.test_executor.evidence import evidence_digest
+from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
+from sentinel_core.modules.test_executor.evidence import evidence_digest
 from server.modules.cicd.quality_gate import (
     attach_decision_integrity,
     evaluate_quality_gate,
@@ -78,7 +78,7 @@ def _engine_execution_artifact(engine: str, *, engine_plan: list[dict], status: 
 
 
 def _refresh_artifact_hash(payload: dict) -> None:
-    from server.modules.pentest.execution_artifacts import (
+    from sentinel_core.modules.pentest.execution_artifacts import (
         _artifact_digest,
         verify_execution_artifact_payload,
     )

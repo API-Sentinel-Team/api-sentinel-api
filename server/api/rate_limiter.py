@@ -4,7 +4,7 @@ from slowapi import Limiter
 from fastapi import Request
 import jwt
 
-from server.config import settings
+from sentinel_core.config import settings
 from server.modules.auth.client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)

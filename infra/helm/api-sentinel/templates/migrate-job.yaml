@@ -18,7 +18,7 @@ spec:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/bin/sh", "-c", "alembic upgrade head"]
+          command: ["/bin/sh", "-c", "sentinel-migrate upgrade head"]
           env:
             {{- range $key, $val := .Values.env }}
             - name: {{ $key }}

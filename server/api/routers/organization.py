@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.future import select
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.auth.rbac import RBAC
-from server.models.core import Account, User, APIEndpoint, Vulnerability, TestRun
+from sentinel_core.models.core import Account, User, APIEndpoint, Vulnerability, TestRun
 
 router = APIRouter()
 

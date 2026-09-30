@@ -7,8 +7,8 @@ import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import FeatureVector
-from server.config import settings
+from sentinel_core.models.core import FeatureVector
+from sentinel_core.config import settings
 
 
 def _flatten_features(features: Dict) -> Tuple[List[str], List[float]]:

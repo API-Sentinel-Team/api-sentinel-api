@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.auth.rbac import RBAC
-from server.modules.persistence.database import get_db
-from server.modules.recon.processor import ReconProcessor
-from server.models.core import ExternalReconFinding
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.recon.processor import ReconProcessor
+from sentinel_core.models.core import ExternalReconFinding
 
 router = APIRouter(tags=["recon"])
 _recon = ReconProcessor()

@@ -25,13 +25,13 @@ from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import RequestLog, SampleData, Sensor, SensitiveDataFinding
+from sentinel_core.config import settings
+from sentinel_core.models.core import RequestLog, SampleData, Sensor, SensitiveDataFinding
 from server.modules.api_inventory.endpoint_discovery import EndpointDiscovery
-from server.modules.passive.findings import persist_sensitive_data_exposure
+from sentinel_core.modules.passive.findings import persist_sensitive_data_exposure
 from server.modules.privacy.retention import apply_retention_policy, get_retention_policy
 from server.modules.sensors.keys import resolve_sensor_by_key
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.vulnerability_detector.pii_scanner import PIIScanner
 
 _pii = PIIScanner()

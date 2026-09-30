@@ -3,8 +3,8 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
-from server.modules.test_executor.target_guard import TargetGuard
+from sentinel_core.models import core as models
+from sentinel_core.modules.test_executor.target_guard import TargetGuard
 import server.modules.workflows.executor as workflow_executor_module
 from server.modules.workflows.executor import WorkflowExecutor
 
@@ -227,7 +227,7 @@ async def test_workflow_execute_honors_kill_switch_before_run_creation(
     db_session.add(workflow)
     await db_session.commit()
 
-    monkeypatch.setattr("server.modules.test_executor.kill_switch.settings.PENTEST_KILL_SWITCH_ENABLED", True)
+    monkeypatch.setattr("sentinel_core.modules.test_executor.kill_switch.settings.PENTEST_KILL_SWITCH_ENABLED", True)
 
     response = await client.post(
         f"/api/workflows/{workflow.id}/execute",

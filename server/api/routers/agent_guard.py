@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
-from server.modules.persistence.database import get_db
-from server.models.core import AgenticSession, MaliciousEventRecord
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.models.core import AgenticSession, MaliciousEventRecord
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 
 router = APIRouter(tags=["Agent Guard"])
 

@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query, Request, Hea
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func
 
-from server.modules.persistence.database import get_db
-from server.models.core import BillingPlan, BillingSubscription, APIEndpoint, User, TestRun
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.models.core import BillingPlan, BillingSubscription, APIEndpoint, User, TestRun
 from server.modules.auth.rbac import RBAC, require_admin
 
 router = APIRouter(tags=["Billing"])
@@ -114,7 +114,7 @@ async def stripe_webhook(
     Stripe webhook endpoint.  Verifies the stripe-signature header using
     STRIPE_WEBHOOK_SECRET and handles subscription lifecycle events.
     """
-    from server.config import settings
+    from sentinel_core.config import settings
     raw_body = await request.body()
 
     # ── Signature verification ────────────────────────────────────────────────

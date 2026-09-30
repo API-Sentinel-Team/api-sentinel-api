@@ -136,3 +136,8 @@ class ConnectionManager:
 
 # Global manager instance
 ws_manager = ConnectionManager()
+
+# In-process delivery for events published while Redis is not configured.
+from sentinel_core.modules.events import set_local_sink  # noqa: E402
+
+set_local_sink(ws_manager.broadcast)

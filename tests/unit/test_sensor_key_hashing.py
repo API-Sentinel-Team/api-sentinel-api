@@ -1,6 +1,6 @@
 import pytest
 
-from server.models.core import Sensor
+from sentinel_core.models.core import Sensor
 from server.modules.sensors.keys import (
     SENSOR_KEY_HASH_PREFIX,
     hash_sensor_key,

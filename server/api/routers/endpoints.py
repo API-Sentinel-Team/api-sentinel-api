@@ -3,14 +3,14 @@ import uuid
 from fastapi import APIRouter, Depends, Query, Body, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_
-from server.modules.persistence.database import get_db, get_read_db
-from server.models.core import APIEndpoint, EndpointRevision
+from sentinel_core.modules.persistence.database import get_db, get_read_db
+from sentinel_core.models.core import APIEndpoint, EndpointRevision
 from server.modules.auth.rbac import RBAC, Permission
 from server.modules.validation.input_validator import InputValidator, ValidationError
 from server.api.rate_limiter import limiter
 from server.modules.cache.redis_cache import get_cache_version, get_json, set_json, bump_cache_version
 from server.modules.api_inventory.lineage import EndpointLineageService
-from server.config import settings
+from sentinel_core.config import settings
 
 router = APIRouter()
 _lineage = EndpointLineageService()

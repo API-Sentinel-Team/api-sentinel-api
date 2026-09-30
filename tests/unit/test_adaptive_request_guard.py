@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from server.models.core import APIEndpoint
+from sentinel_core.models.core import APIEndpoint
 from server.modules.enforcement.adaptive_rate_limiter import AdaptiveRequestGuard
 
 

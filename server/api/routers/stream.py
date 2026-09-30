@@ -14,10 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.websocket.manager import ws_manager
-from server.config import settings
-from server.models.core import Alert, IngestionJob, MaliciousEventRecord, RequestLog, Sensor, ThreatActor
+from sentinel_core.config import settings
+from sentinel_core.models.core import Alert, IngestionJob, MaliciousEventRecord, RequestLog, Sensor, ThreatActor
 from server.modules.api_inventory.endpoint_discovery import EndpointDiscovery, inventory_path
-from server.modules.auth.audit import log_action
+from sentinel_core.modules.auth.audit import log_action
 from server.modules.auth.rbac import RBAC
 from server.modules.cache.redis_cache import bump_cache_version
 from server.modules.detection.pipeline import unified_detection_pipeline
@@ -25,10 +25,10 @@ from server.modules.ingestion.queue import IngestionJobItem, ingestion_queue
 from server.modules.ingestion.redaction import redact_ingestion_path
 from server.modules.ingestion.self_traffic import excluded_hosts, is_self_traffic
 from server.modules.ingestion.sensor_time import clamp_sensor_ts_ms, coerce_sensor_ts_ms
-from server.modules.persistence.database import AsyncSessionLocal, get_db
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, get_db
 from server.modules.quotas.tenant_quota import check_ingest_quota
 from server.modules.sensors.keys import resolve_sensor_by_key
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 
 router = APIRouter()
 

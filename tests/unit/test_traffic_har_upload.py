@@ -8,7 +8,7 @@ import json
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
+from sentinel_core.models import core as models
 
 
 def _har_file(entries: list[dict]) -> tuple[str, bytes, str]:

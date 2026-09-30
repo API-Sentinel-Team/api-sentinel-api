@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.rate_limiter import limiter
 from server.api.websocket.manager import ws_manager
-from server.models.core import Alert, APICollection, APIEndpoint, IngestionJob, MaliciousEventRecord, RequestLog, Sensor, ThreatActor
-from server.modules.api_inventory.path_normalizer import PathNormalizer
+from sentinel_core.models.core import Alert, APICollection, APIEndpoint, IngestionJob, MaliciousEventRecord, RequestLog, Sensor, ThreatActor
+from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 
 _path_normalizer = PathNormalizer()
 
@@ -75,13 +75,13 @@ async def _upsert_endpoint(db, account_id: int, method: str, path: str, host: st
         ))
 from server.modules.auth.rbac import RBAC
 from server.modules.ingestion.queue import ingestion_queue
-from server.modules.persistence.database import get_read_db
+from sentinel_core.modules.persistence.database import get_read_db
 from server.modules.quotas.tenant_quota import peek_ingest_quota, check_ingest_quota
-from server.config import settings
+from sentinel_core.config import settings
 from server.modules.ingestion.schema import EventBatch, APITrafficEvent
 from server.modules.ingestion.queue import IngestionJobItem
-from server.modules.persistence.database import get_db
-from server.modules.auth.audit import log_action
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.auth.audit import log_action
 from server.modules.detection.pipeline import unified_detection_pipeline
 from server.modules.ingestion.redaction import redact_ingestion_path
 from server.modules.sensors.keys import resolve_sensor_by_key

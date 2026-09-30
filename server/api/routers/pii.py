@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from server.modules.persistence.database import get_db, get_read_db
+from sentinel_core.modules.persistence.database import get_db, get_read_db
 from server.modules.vulnerability_detector.pii_scanner import PIIScanner
-from server.models.core import SampleData, APIEndpoint, SensitiveDataFinding
+from sentinel_core.models.core import SampleData, APIEndpoint, SensitiveDataFinding
 from server.modules.auth.rbac import RBAC
 
 router = APIRouter()

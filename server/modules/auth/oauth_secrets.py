@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from server.models.core import OAuthProvider
-from server.modules.auth.encryption import Encryption
+from sentinel_core.models.core import OAuthProvider
+from sentinel_core.modules.auth.encryption import Encryption
 
 
 class OAuthProviderSecretCodec:

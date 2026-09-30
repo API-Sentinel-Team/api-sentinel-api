@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
-from server.models.core import EvidenceRecord
+from sentinel_core.models.core import EvidenceRecord
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_read_db
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.persistence.database import get_read_db
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.validation.input_validator import InputValidator, ValidationError
 
 router = APIRouter()

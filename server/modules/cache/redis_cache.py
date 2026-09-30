@@ -7,7 +7,7 @@ try:
 except ImportError:
     redis = None
 
-from server.config import settings
+from sentinel_core.config import settings
 
 logger = logging.getLogger(__name__)
 

@@ -8,13 +8,13 @@ from collections import defaultdict
 import structlog
 from sqlalchemy import update, and_, select
 
-from server.config import settings
-from server.modules.persistence.database import AsyncSessionLocal
-from server.models.core import APIEndpoint
-from server.modules.integrations.dispatcher import dispatch_event
-from server.models.core import EvidenceRecord, PolicyViolation
-from server.models.core import Alert
-from server.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.config import settings
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.models.core import APIEndpoint
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.models.core import EvidenceRecord, PolicyViolation
+from sentinel_core.models.core import Alert
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
 
 logger = structlog.get_logger(__name__)
 

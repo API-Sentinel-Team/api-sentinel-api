@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import select
 
 import server.api.routers.oauth as oauth_router
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.auth.oauth_secrets import OAuthProviderSecretCodec
 
 

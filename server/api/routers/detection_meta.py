@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.auth.rbac import RBAC
 from server.modules.detection.pipeline import unified_detection_pipeline
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 
 router = APIRouter(tags=["Detection Engine"])
 

@@ -248,7 +248,7 @@ def test_orchestrator_governance_controls_include_ci_artifact_accountability(mon
     )
     # tenant_isolation reports the actual TENANT_RLS_ENABLED configuration; this
     # test pins the control vocabulary with RLS enabled.
-    monkeypatch.setattr("server.config.settings.TENANT_RLS_ENABLED", True)
+    monkeypatch.setattr("sentinel_core.config.settings.TENANT_RLS_ENABLED", True)
 
     controls = _north_star_governance_controls(_observed_runtime_facts())
 
@@ -262,7 +262,7 @@ def test_orchestrator_governance_controls_include_ci_artifact_accountability(mon
 
 def test_orchestrator_workflow_controls_require_persisted_runtime_facts(monkeypatch):
     """P0-7: scheduler functions existing and the mode being queued prove nothing."""
-    monkeypatch.setattr("server.config.settings.PENTEST_SCAN_EXECUTION_MODE", "queued")
+    monkeypatch.setattr("sentinel_core.config.settings.PENTEST_SCAN_EXECUTION_MODE", "queued")
 
     without_evidence = _north_star_workflow_controls(_empty_runtime_facts())
 
@@ -285,7 +285,7 @@ def test_orchestrator_workflow_controls_require_persisted_runtime_facts(monkeypa
 
 def test_orchestrator_workflow_controls_default_to_no_evidence_without_facts(monkeypatch):
     """Fail closed: a caller that supplies no runtime facts cannot claim readiness."""
-    monkeypatch.setattr("server.config.settings.PENTEST_SCAN_EXECUTION_MODE", "queued")
+    monkeypatch.setattr("sentinel_core.config.settings.PENTEST_SCAN_EXECUTION_MODE", "queued")
 
     controls = _north_star_workflow_controls()
 
@@ -299,7 +299,7 @@ def test_orchestrator_workflow_controls_default_to_no_evidence_without_facts(mon
 
 def test_orchestrator_workflow_controls_keep_queued_execution_config_bound(monkeypatch):
     """Persisted worker runs do not make `queued_execution` true in background mode."""
-    monkeypatch.setattr("server.config.settings.PENTEST_SCAN_EXECUTION_MODE", "background")
+    monkeypatch.setattr("sentinel_core.config.settings.PENTEST_SCAN_EXECUTION_MODE", "background")
 
     controls = _north_star_workflow_controls(_observed_runtime_facts())
 
@@ -313,7 +313,7 @@ def test_orchestrator_governance_controls_require_observed_worker_isolation(monk
         "server.modules.pentest.orchestrator._configured_worker_isolation_mode",
         lambda: "leased_external_worker",
     )
-    monkeypatch.setattr("server.config.settings.TENANT_RLS_ENABLED", True)
+    monkeypatch.setattr("sentinel_core.config.settings.TENANT_RLS_ENABLED", True)
 
     without_evidence = _north_star_governance_controls(_empty_runtime_facts())
 

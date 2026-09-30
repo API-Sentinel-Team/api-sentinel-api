@@ -14,7 +14,7 @@ _memory_store: dict[int, dict[str, dict[str, int]]] = defaultdict(lambda: defaul
 
 def _redis_client():
     try:
-        from server.config import settings
+        from sentinel_core.config import settings
         if not settings.REDIS_URL:
             return None
         import redis.asyncio as aioredis

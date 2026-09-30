@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 
 
 def redact_ingestion_path(path: Any) -> str:

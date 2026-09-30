@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 import server.modules.workflows.executor as workflow_executor
-from server.models.core import APIWorkflowRun
+from sentinel_core.models.core import APIWorkflowRun
 
 
 class _FakeResponse:

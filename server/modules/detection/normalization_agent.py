@@ -10,8 +10,8 @@ from urllib.parse import parse_qsl, urlparse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import APICollection, APIEndpoint, RequestLog
-from server.modules.api_inventory.path_normalizer import PathNormalizer
+from sentinel_core.models.core import APICollection, APIEndpoint, RequestLog
+from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 from server.modules.ingestion.redaction import redact_ingestion_path
 from server.modules.ingestion.sensor_time import coerce_sensor_ts_ms
 

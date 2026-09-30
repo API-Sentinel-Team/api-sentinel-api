@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import server.modules.ingestion.processors as processors
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.ingestion.processors import process_event_batch, process_http_traffic, process_stream_lines
 from server.modules.ingestion.redaction import redact_ingestion_path
 from server.modules.ingestion.schema import APIRequest, APIResponse, APITrafficEvent, EventBatch

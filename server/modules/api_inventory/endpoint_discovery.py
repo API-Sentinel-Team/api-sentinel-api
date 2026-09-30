@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import APICollection, APIEndpoint
-from .path_normalizer import PathNormalizer
+from sentinel_core.models.core import APICollection, APIEndpoint
+from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 
 _DEFAULT_COLLECTION_NAME = "Default Inventory"
 

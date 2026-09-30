@@ -13,26 +13,22 @@ from slowapi.errors import RateLimitExceeded
 
 from server.api.rate_limiter import limiter
 from server.api.routers import router
-from server.config import settings
-from server.models import Base
-from server.models.core import User
+from server.api.websocket.relay import dashboard_event_relay
+from sentinel_core.config import settings
+from sentinel_core.models import Base
+from sentinel_core.models.core import User
 from server.modules.analytics.processor import AnalyticsProcessor
 from server.modules.api_inventory.lifecycle import EndpointLifecycleProcessor
 from server.modules.auth.password_hasher import PasswordHasher
 from server.modules.config.logging_config import configure_logging
 from server.modules.enforcement.adaptive_rate_limiter import AdaptiveRequestGuard
 from server.modules.ingestion.queue import ingestion_queue
-from server.modules.persistence.database import AsyncSessionLocal, engine, get_db
-from server.modules.recon.scheduler import ReconScheduler
-from server.modules.response.default_playbooks import ensure_default_playbooks
-from server.modules.scheduler.test_scheduler import TestScheduler
-from server.modules.scheduler.continuous_testing import ContinuousTestingProcessor
-from server.modules.scheduler.openapi_drift import OpenAPIDriftProcessor
-from server.modules.storage.archiver import ArchiveProcessor
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, engine, get_db
+from sentinel_core.modules.response.default_playbooks import ensure_default_playbooks
 from server.modules.storage.warm_exporter import WarmStoreExporter
 from server.modules.streaming.kafka_alert_consumer import KafkaAlertConsumer
 from server.modules.streaming.pipeline import StreamPipeline
-from server.modules.test_executor.wordlist_manager import WordlistManager
+from sentinel_core.modules.test_executor.wordlist_manager import WordlistManager
 
 configure_logging()
 logger = structlog.get_logger()
@@ -128,16 +124,9 @@ async def _refresh_template_library() -> int:
 def _build_runtime_components() -> list[tuple[str, Callable[[], Awaitable[None]], Callable[[], Awaitable[None]]]]:
     components: list[tuple[str, Callable[[], Awaitable[None]], Callable[[], Awaitable[None]]]] = []
 
-    if settings.STARTUP_ENABLE_TEST_SCHEDULER:
-        scheduler = TestScheduler()
-
-        async def _start_scheduler() -> None:
-            scheduler.start()
-
-        async def _stop_scheduler() -> None:
-            scheduler.stop()
-
-        components.append(("test_scheduler", _start_scheduler, _stop_scheduler))
+    # Scheduling, archiving, recon, continuous testing and OpenAPI drift run in
+    # their own services (api-sentinel-scheduler / api-sentinel-archiver).
+    components.append(("dashboard_event_relay", dashboard_event_relay.start, dashboard_event_relay.stop))
 
     if settings.STARTUP_ENABLE_INGESTION_QUEUE:
         components.append(("ingestion_queue", ingestion_queue.start, ingestion_queue.stop))
@@ -149,13 +138,6 @@ def _build_runtime_components() -> list[tuple[str, Callable[[], Awaitable[None]]
         )
         components.append(("analytics_processor", analytics.start, analytics.stop))
 
-    if settings.STARTUP_ENABLE_ARCHIVER:
-        archiver = ArchiveProcessor(
-            interval_sec=3600,
-            account_id=settings.STARTUP_ARCHIVER_ACCOUNT_ID,
-        )
-        components.append(("archive_processor", archiver.start, archiver.stop))
-
     if settings.STARTUP_ENABLE_WARM_EXPORTER:
         warm_exporter = WarmStoreExporter(interval_sec=settings.WARM_EXPORT_INTERVAL_SECONDS)
         components.append(("warm_exporter", warm_exporter.start, warm_exporter.stop))
@@ -163,26 +145,6 @@ def _build_runtime_components() -> list[tuple[str, Callable[[], Awaitable[None]]
     if settings.STARTUP_ENABLE_ENDPOINT_LIFECYCLE:
         lifecycle = EndpointLifecycleProcessor(interval_sec=settings.LIFECYCLE_SWEEP_INTERVAL_SECONDS)
         components.append(("endpoint_lifecycle", lifecycle.start, lifecycle.stop))
-
-    if settings.STARTUP_ENABLE_RECON_SCHEDULER and settings.RECON_SCHEDULER_ENABLED:
-        recon_scheduler = ReconScheduler(interval_sec=settings.RECON_SCHEDULER_INTERVAL_SECONDS)
-        components.append(("recon_scheduler", recon_scheduler.start, recon_scheduler.stop))
-
-    if settings.STARTUP_ENABLE_CONTINUOUS_TESTING and settings.CONTINUOUS_TESTING_ENABLED:
-        continuous_testing = ContinuousTestingProcessor(
-            interval_sec=settings.CONTINUOUS_TESTING_SWEEP_INTERVAL_SECONDS
-        )
-        components.append(
-            ("continuous_testing", continuous_testing.start, continuous_testing.stop)
-        )
-
-    if settings.STARTUP_ENABLE_OPENAPI_DRIFT and settings.OPENAPI_DRIFT_ENABLED:
-        openapi_drift = OpenAPIDriftProcessor(
-            interval_sec=settings.OPENAPI_DRIFT_SWEEP_INTERVAL_SECONDS
-        )
-        components.append(
-            ("openapi_drift", openapi_drift.start, openapi_drift.stop)
-        )
 
     if settings.STARTUP_ENABLE_STREAM_PIPELINE and settings.STREAM_PROCESSING_ENABLED:
         stream_pipeline = StreamPipeline()

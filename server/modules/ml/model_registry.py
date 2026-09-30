@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import MLModel
+from sentinel_core.models.core import MLModel
 
 
 DEFAULT_MODELS = [

@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from server.models.core import EvidenceRecord
+from sentinel_core.models.core import EvidenceRecord
 
 
 @pytest.mark.asyncio

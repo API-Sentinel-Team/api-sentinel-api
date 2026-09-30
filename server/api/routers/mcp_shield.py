@@ -11,9 +11,9 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import MCPEndpoint, WAFEvent
+from sentinel_core.models.core import MCPEndpoint, WAFEvent
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 
 router = APIRouter(tags=["MCP Shield"])
 

@@ -2,7 +2,7 @@ import datetime
 import pytest
 from sqlalchemy import select
 
-from server.models.core import RequestLog, EndpointMetricHourly, ActorMetricHourly
+from sentinel_core.models.core import RequestLog, EndpointMetricHourly, ActorMetricHourly
 from server.modules.analytics.aggregator import aggregate_hourly
 
 

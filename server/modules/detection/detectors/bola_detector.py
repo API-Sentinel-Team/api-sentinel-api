@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from server.config import settings
+from sentinel_core.config import settings
 
 from ..models import DetectorMetadata, DetectionEnvelope, DetectionSignal
 from .common import build_signal

@@ -3,11 +3,11 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from server.config import settings
+from sentinel_core.config import settings
 from server.modules.ingestion.dead_letter import redact_dead_letter_error, redact_dead_letter_payload
 from server.modules.ingestion.processors import process_stream_lines, process_http_traffic, process_event_batch
-from server.modules.persistence.database import AsyncSessionLocal
-from server.models.core import IngestionJob, IngestionDeadLetter
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.models.core import IngestionJob, IngestionDeadLetter
 from sqlalchemy import update
 
 logger = logging.getLogger(__name__)

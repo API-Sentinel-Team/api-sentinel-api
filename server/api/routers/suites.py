@@ -2,15 +2,24 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select
 
-import server.api.routers.tests as tests_router
-from server.models.core import APIEndpoint, TestRun
+from sentinel_core.models.core import APIEndpoint, TestRun
 from server.modules.auth.rbac import Permission, RBAC, can_run_tests
-from server.modules.persistence.database import get_db
-from server.modules.pentest.auth_preflight import active_scan_auth_audit_context
+from server.api.scan_guards import (
+    load_scan_profile_for_execution,
+    request_ip,
+    scan_execution_mode,
+    validate_scan_auth_scope,
+    validate_scan_budget,
+    validate_scan_endpoint_targets,
+)
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.test_executor.kill_switch import KILL_SWITCH_REASON, kill_switch_enabled
+from sentinel_core.modules.test_executor.scan_planning import audit_scan_event, planned_test_count
+from sentinel_core.modules.pentest.auth_preflight import active_scan_auth_audit_context
 from server.modules.suites.suite_manager import SuiteManager
 from server.modules.validation.input_validator import InputValidator, ValidationError
 
@@ -82,7 +91,6 @@ async def get_suite_templates(
 async def run_suite(
     suite_name: str,
     request: Request,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     payload: dict = Depends(can_run_tests),
 ):
@@ -122,9 +130,9 @@ async def run_suite(
             detail=f"Suite '{validated_suite_name}' has no runnable templates",
         )
 
-    if tests_router.kill_switch_enabled():
-        raise HTTPException(status_code=503, detail=tests_router.KILL_SWITCH_REASON)
-    tests_router._validate_scan_budget(template_ids, endpoint_ids)
+    if kill_switch_enabled():
+        raise HTTPException(status_code=503, detail=KILL_SWITCH_REASON)
+    validate_scan_budget(template_ids, endpoint_ids)
 
     result = await db.execute(
         select(APIEndpoint).where(
@@ -135,16 +143,16 @@ async def run_suite(
     valid_ids = {str(endpoint.id) for endpoint in endpoints}
     if len(valid_ids) < len(endpoint_ids):
         raise HTTPException(status_code=403, detail="Some endpoints do not belong to your account")
-    tests_router._validate_scan_endpoint_targets(endpoints)
+    validate_scan_endpoint_targets(endpoints)
 
-    pentest_profile, auth_profile = await tests_router._load_scan_profile_for_execution(
+    pentest_profile, auth_profile = await load_scan_profile_for_execution(
         db,
         account_id=account_id,
         pentest_profile_id=pentest_profile_id,
     )
-    tests_router._validate_scan_auth_scope(endpoints, auth_profile)
+    validate_scan_auth_scope(endpoints, auth_profile)
     effective_pentest_profile_id = pentest_profile.id if pentest_profile is not None else pentest_profile_id
-    execution_mode = tests_router._scan_execution_mode()
+    execution_mode = scan_execution_mode()
 
     run_id = str(uuid.uuid4())
     run = TestRun(
@@ -157,7 +165,7 @@ async def run_suite(
         trigger_source="suite",
     )
     db.add(run)
-    await tests_router._audit_scan_event(
+    await audit_scan_event(
         db,
         action="SCAN_RUN_QUEUED",
         account_id=account_id,
@@ -168,29 +176,19 @@ async def run_suite(
             "suite_name": validated_suite_name,
             "template_count": len(template_ids),
             "endpoint_count": len(endpoint_ids),
-            "planned_tests": tests_router._planned_test_count(template_ids, endpoint_ids),
+            "planned_tests": planned_test_count(template_ids, endpoint_ids),
             "pentest_profile_id": effective_pentest_profile_id,
             **active_scan_auth_audit_context(pentest_profile, auth_profile),
             "execution_mode": execution_mode,
             "trigger_source": run.trigger_source,
         },
-        ip_address=tests_router._request_ip(request),
+        ip_address=request_ip(request),
     )
     await db.commit()
 
-    if execution_mode == "background":
-        background_tasks.add_task(
-            tests_router._run_security_tasks,
-            run_id,
-            template_ids,
-            endpoint_ids,
-            account_id,
-            effective_pentest_profile_id,
-            db.bind,
-        )
 
     return {
-        "status": "scan_started" if execution_mode == "background" else "scan_queued",
+        "status": "scan_queued",
         "suite": validated_suite_name,
         "run_id": run_id,
         "template_count": len(template_ids),

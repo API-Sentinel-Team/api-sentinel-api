@@ -1,10 +1,11 @@
 import pytest
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import HTTPException
 from sqlalchemy import select
 
 import server.api.routers.suites as suites_router
-import server.api.routers.tests as tests_router
-from server.models import core as models
+from sentinel_core.config import settings
+from sentinel_core.modules.test_executor.target_guard import TargetGuard
+from sentinel_core.models import core as models
 
 
 class _FakeRequest:
@@ -59,16 +60,14 @@ async def test_run_suite_queues_guarded_scan_with_profile(db_session, monkeypatc
         {"id": "suite-auth-check", "info": {"severity": "LOW"}},
         {"id": "suite-bola-check", "info": {"severity": "HIGH"}},
     ]))
-    monkeypatch.setattr(tests_router.settings, "PENTEST_SCAN_EXECUTION_MODE", "queued")
+    monkeypatch.setattr(settings, "PENTEST_SCAN_EXECUTION_MODE", "queued")
 
-    background_tasks = BackgroundTasks()
     response = await suites_router.run_suite(
         suite_name="safe-api",
         request=_FakeRequest({
             "endpoint_ids": [endpoint.id],
             "pentest_profile_id": pentest_profile.id,
         }),
-        background_tasks=background_tasks,
         db=db_session,
         payload={"account_id": account_id, "user_id": "suite-user"},
     )
@@ -77,7 +76,6 @@ async def test_run_suite_queues_guarded_scan_with_profile(db_session, monkeypatc
     assert response["suite"] == "safe-api"
     assert response["trigger_source"] == "suite"
     assert response["pentest_profile_id"] == pentest_profile.id
-    assert len(background_tasks.tasks) == 0
 
     stored = await db_session.get(models.TestRun, response["run_id"])
     assert stored.trigger_source == "suite"
@@ -108,21 +106,18 @@ async def test_run_suite_honors_kill_switch_before_queue(db_session, monkeypatch
     monkeypatch.setattr(suites_router, "_suite_manager", _FakeSuiteManager([
         {"id": "suite-auth-check", "info": {"severity": "LOW"}},
     ]))
-    monkeypatch.setattr(tests_router.settings, "PENTEST_KILL_SWITCH_ENABLED", True)
+    monkeypatch.setattr(settings, "PENTEST_KILL_SWITCH_ENABLED", True)
 
-    background_tasks = BackgroundTasks()
     with pytest.raises(HTTPException) as exc:
         await suites_router.run_suite(
             suite_name="safe-api",
             request=_FakeRequest({"endpoint_ids": []}),
-            background_tasks=background_tasks,
             db=db_session,
             payload={"account_id": 1002110, "user_id": "suite-user"},
         )
 
     assert exc.value.status_code == 503
     assert exc.value.detail == "pentest_kill_switch_enabled"
-    assert len(background_tasks.tasks) == 0
     runs = (
         await db_session.execute(
             select(models.TestRun).where(models.TestRun.account_id == 1002110)
@@ -147,19 +142,17 @@ async def test_run_suite_rejects_target_guard_blocked_endpoint_before_queue(db_s
     monkeypatch.setattr(suites_router, "_suite_manager", _FakeSuiteManager([
         {"id": "suite-auth-check", "info": {"severity": "LOW"}},
     ]))
-    guard = tests_router.TargetGuard(
+    guard = TargetGuard(
         allow_private_targets=False,
         resolve_hosts=True,
         resolver=lambda _host, _port: ["127.0.0.1"],
     )
-    monkeypatch.setattr(tests_router.TargetGuard, "from_settings", staticmethod(lambda: guard))
+    monkeypatch.setattr(TargetGuard, "from_settings", staticmethod(lambda: guard))
 
-    background_tasks = BackgroundTasks()
     with pytest.raises(HTTPException) as exc:
         await suites_router.run_suite(
             suite_name="safe-api",
             request=_FakeRequest({"endpoint_ids": [endpoint.id]}),
-            background_tasks=background_tasks,
             db=db_session,
             payload={"account_id": account_id, "user_id": "suite-user"},
         )
@@ -171,7 +164,6 @@ async def test_run_suite_rejects_target_guard_blocked_endpoint_before_queue(db_s
     assert blocked_endpoint["target_guard_policy"]["policy"] == "target_guard"
     assert blocked_endpoint["target_guard_policy"]["blocked"] is True
     assert blocked_endpoint["target_guard_policy"]["url"] == "https://api.example.test/suite-blocked"
-    assert len(background_tasks.tasks) == 0
     runs = (
         await db_session.execute(
             select(models.TestRun).where(models.TestRun.account_id == account_id)

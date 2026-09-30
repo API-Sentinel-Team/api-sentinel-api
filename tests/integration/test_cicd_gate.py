@@ -19,7 +19,7 @@ pytestmark = pytest.mark.asyncio
 
 
 def _complete_clean_evidence(template_id: str = "engine-clean-check") -> str:
-    from server.modules.test_executor.evidence import evidence_digest
+    from sentinel_core.modules.test_executor.evidence import evidence_digest
 
     evidence = {
         "engine": "template",
@@ -59,7 +59,7 @@ def _complete_clean_evidence(template_id: str = "engine-clean-check") -> str:
 
 
 def _complete_confirmed_vulnerability_evidence(template_id: str = "historic-bola") -> dict:
-    from server.modules.test_executor.evidence import evidence_digest
+    from sentinel_core.modules.test_executor.evidence import evidence_digest
 
     evidence = {
         "engine": "template",
@@ -115,7 +115,7 @@ def _complete_confirmed_vulnerability_evidence(template_id: str = "historic-bola
 
 
 def _refresh_artifact_hash(payload: dict) -> None:
-    from server.modules.pentest.execution_artifacts import (
+    from sentinel_core.modules.pentest.execution_artifacts import (
         _artifact_digest,
         verify_execution_artifact_payload,
     )
@@ -143,7 +143,7 @@ async def admin_token():
 @pytest_asyncio.fixture
 async def run_id(client: AsyncClient, admin_token, db_session):
     """Create a completed test run with one vulnerable result."""
-    from server.models.core import TestRun, TestResult
+    from sentinel_core.models.core import TestRun, TestResult
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -178,7 +178,7 @@ async def run_id(client: AsyncClient, admin_token, db_session):
 @pytest_asyncio.fixture
 async def clean_run_id(client: AsyncClient, admin_token, db_session):
     """Create a completed test run with no vulnerable results."""
-    from server.models.core import TestRun, TestResult
+    from sentinel_core.models.core import TestRun, TestResult
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -234,7 +234,7 @@ async def test_gate_blocks_authorization_replay_without_boundary_coverage(
     db_session,
     auth_headers,
 ):
-    from server.models.core import TestRun, TestResult
+    from sentinel_core.models.core import TestRun, TestResult
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -303,8 +303,8 @@ async def test_strict_gate_blocks_authorization_replay_without_boundary_coverage
     db_session,
     auth_headers,
 ):
-    from server.models.core import TestRun, TestResult
-    from server.modules.test_executor.evidence import evidence_digest
+    from sentinel_core.models.core import TestRun, TestResult
+    from sentinel_core.modules.test_executor.evidence import evidence_digest
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -399,8 +399,8 @@ async def test_strict_gate_blocks_authorization_replay_boundary_that_does_not_ma
     db_session,
     auth_headers,
 ):
-    from server.models.core import TestRun, TestResult
-    from server.modules.test_executor.evidence import evidence_digest
+    from sentinel_core.models.core import TestRun, TestResult
+    from sentinel_core.modules.test_executor.evidence import evidence_digest
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -552,8 +552,8 @@ async def test_artifact_manifest_accounts_for_stored_engine_execution_artifacts(
     db_session,
     auth_headers,
 ):
-    from server.models.core import PentestArtifact, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import PentestArtifact, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -616,7 +616,7 @@ async def test_strict_gate_fails_when_ready_engine_execution_artifacts_are_missi
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestProfile, TestResult, TestRun
+    from sentinel_core.models.core import AuthProfile, PentestProfile, TestResult, TestRun
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -704,8 +704,8 @@ async def test_strict_gate_fails_when_engine_execution_artifact_payload_is_for_w
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -824,8 +824,8 @@ async def test_strict_gate_fails_when_engine_artifact_content_governance_is_not_
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -960,8 +960,8 @@ async def test_strict_gate_fails_when_engine_execution_artifacts_are_duplicated(
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1090,8 +1090,8 @@ async def test_strict_gate_fails_when_engine_artifact_lacks_external_worker_isol
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1222,8 +1222,8 @@ async def test_strict_gate_fails_when_context_selection_accountability_is_missin
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1377,8 +1377,8 @@ async def test_strict_gate_fails_when_llm_selection_coverage_family_details_are_
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1513,8 +1513,8 @@ async def test_strict_gate_fails_when_business_logic_selection_coverage_family_d
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1649,8 +1649,8 @@ async def test_strict_gate_fails_when_active_family_coverage_claims_available_bu
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1817,8 +1817,8 @@ async def test_strict_gate_fails_when_authorization_selection_coverage_identity_
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -1953,8 +1953,8 @@ async def test_strict_gate_fails_when_authorization_selection_coverage_identity_
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -2104,8 +2104,8 @@ async def test_strict_gate_fails_when_authorization_coverage_claims_available_bu
     db_session,
     auth_headers,
 ):
-    from server.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
-    from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+    from sentinel_core.models.core import AuthProfile, PentestArtifact, PentestProfile, TestResult, TestRun
+    from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -2258,7 +2258,7 @@ async def test_strict_gate_fails_clean_run_with_unticketed_blocking_vulnerabilit
     auth_headers,
 ):
     from datetime import datetime, timezone
-    from server.models.core import AuthProfile, PentestProfile, TestResult, TestRun, Vulnerability
+    from sentinel_core.models.core import AuthProfile, PentestProfile, TestResult, TestRun, Vulnerability
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -2359,7 +2359,7 @@ async def test_strict_gate_fails_clean_run_with_unhealthy_ticket_sync(
     auth_headers,
 ):
     from datetime import datetime, timezone
-    from server.models.core import AuthProfile, PentestProfile, TestResult, TestRun, Vulnerability
+    from sentinel_core.models.core import AuthProfile, PentestProfile, TestResult, TestRun, Vulnerability
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -2471,7 +2471,7 @@ async def test_strict_gate_fails_clean_run_with_stale_ticket_sync(
     auth_headers,
 ):
     from datetime import datetime, timezone
-    from server.models.core import AuthProfile, PentestProfile, TestResult, TestRun, Vulnerability
+    from sentinel_core.models.core import AuthProfile, PentestProfile, TestResult, TestRun, Vulnerability
     import uuid
 
     run_id = str(uuid.uuid4())
@@ -2582,7 +2582,7 @@ async def test_legacy_gate_blocks_missing_ready_engine_execution_artifacts(
     db_session,
     auth_headers,
 ):
-    from server.models.core import TestResult, TestRun
+    from sentinel_core.models.core import TestResult, TestRun
     import uuid
 
     run_id = str(uuid.uuid4())

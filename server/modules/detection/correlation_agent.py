@@ -8,11 +8,11 @@ from typing import Any, Optional
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import Alert, EvidenceRecord, MaliciousEvent, MaliciousEventRecord, ThreatActor
+from sentinel_core.config import settings
+from sentinel_core.models.core import Alert, EvidenceRecord, MaliciousEvent, MaliciousEventRecord, ThreatActor
 from server.modules.evidence.package import save_evidence_package
 from server.modules.ingestion.redaction import redact_ingestion_path
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 
 from .models import IncidentDecision, SEVERITY_SCORES, DetectionEnvelope, DetectionSignal
 from .state_store import state_store

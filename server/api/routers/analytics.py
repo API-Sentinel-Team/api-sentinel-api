@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from server.modules.auth.rbac import RBAC
-from server.modules.persistence.database import get_read_db, get_db
-from server.models.core import EndpointMetricHourly, ActorMetricHourly, AlertMetricDaily
+from sentinel_core.modules.persistence.database import get_read_db, get_db
+from sentinel_core.models.core import EndpointMetricHourly, ActorMetricHourly, AlertMetricDaily
 from server.modules.analytics.aggregator import recompute_recent
 
 router = APIRouter(tags=["Analytics"])

@@ -6,10 +6,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import Alert
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.config import settings
+from sentinel_core.models.core import Alert
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
 
 from .correlation_agent import correlation_agent
 from .enforcement_agent import enforcement_agent

@@ -4,21 +4,21 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from server.models.core import APIEndpoint, OpenAPISpec, PolicyViolation, EvidenceRecord
+from sentinel_core.models.core import APIEndpoint, OpenAPISpec, PolicyViolation, EvidenceRecord
 from server.modules.auth.rbac import Permission, RBAC
 from server.modules.cache.redis_cache import bump_cache_version
 from server.modules.api_inventory.endpoint_discovery import (
     EndpointDiscovery,
     openapi_operations_to_discovery_entries,
 )
-from server.modules.api_inventory.openapi_generator import OpenAPIGenerator
-from server.modules.api_inventory.openapi_diff import OpenAPIDiffAnalyzer
-from server.modules.api_inventory.zap_plan import ZapScanPlanBuilder
-from server.modules.pentest.target_policy import target_guard_policy_for_error
-from server.modules.persistence.database import get_db
-from server.modules.test_executor.target_guard import TargetGuardError
-from server.modules.utils.redactor import Redactor
-from server.modules.zap.findings import persist_zap_report
+from sentinel_core.modules.api_inventory.openapi_generator import OpenAPIGenerator
+from sentinel_core.modules.api_inventory.openapi_diff import OpenAPIDiffAnalyzer
+from sentinel_core.modules.api_inventory.zap_plan import ZapScanPlanBuilder
+from sentinel_core.modules.pentest.target_policy import target_guard_policy_for_error
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.test_executor.target_guard import TargetGuardError
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.modules.zap.findings import persist_zap_report
 
 router = APIRouter()
 _gen = OpenAPIGenerator()

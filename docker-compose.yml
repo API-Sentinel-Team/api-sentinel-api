@@ -43,7 +43,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: /bin/sh -c "alembic upgrade head && uvicorn server.api.main:app --host 0.0.0.0 --port 8000"
+    command: /bin/sh -c "sentinel-migrate upgrade head && uvicorn server.api.main:app --host 0.0.0.0 --port 8000"
 
   api-sentinel-scheduler:
     build: .
@@ -72,7 +72,7 @@ services:
         condition: service_healthy
       api-sentinel-api:
         condition: service_healthy
-    command: ["python", "-m", "server.services.scheduler_service"]
+    command: ["python", "-m", "sentinel_scheduler.services.scheduler_service"]
 
   api-sentinel-archiver:
     build: .
@@ -95,7 +95,7 @@ services:
         condition: service_healthy
       api-sentinel-api:
         condition: service_healthy
-    command: ["python", "-m", "server.services.archiver_service"]
+    command: ["python", "-m", "sentinel_archiver.services.archiver_service"]
 
   # Isolated scan worker with Schemathesis / Nuclei / ZAP CLIs.
   # Start with: docker compose --profile scan-worker up --build

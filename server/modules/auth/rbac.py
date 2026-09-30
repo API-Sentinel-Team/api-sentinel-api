@@ -6,7 +6,7 @@ from typing import List, Callable, Optional, Set
 from fastapi import HTTPException, Depends, Security, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from .jwt_issuer import JWTIssuer, TokenRevokedError
-from server.modules.tenancy.context import set_current_account_id
+from sentinel_core.modules.tenancy.context import set_current_account_id
 import logging
 
 logger = logging.getLogger(__name__)

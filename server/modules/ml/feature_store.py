@@ -8,7 +8,7 @@ from typing import Dict, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import FeatureVector
+from sentinel_core.models.core import FeatureVector
 
 
 def _hour_bucket(ts_ms: int) -> int:

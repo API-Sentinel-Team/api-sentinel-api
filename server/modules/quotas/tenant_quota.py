@@ -3,7 +3,7 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
-from server.config import settings
+from sentinel_core.config import settings
 from server.modules.cache.redis_cache import get_int, incr
 
 

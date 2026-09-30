@@ -1,7 +1,7 @@
 import asyncio
 import datetime
-from server.modules.persistence.database import AsyncSessionLocal
-from server.models.core import APIEndpoint
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.models.core import APIEndpoint
 
 async def seed():
     print("Seeding SQLite with test data...")

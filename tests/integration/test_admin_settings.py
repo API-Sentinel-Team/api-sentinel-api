@@ -1,6 +1,6 @@
 import pytest
 
-from server.models.core import APICollection, APIEndpoint
+from sentinel_core.models.core import APICollection, APIEndpoint
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

@@ -5,7 +5,7 @@ Tracks failed login attempts per IP address and applies exponential backoff.
 import time
 from datetime import datetime, timedelta, timezone
 from server.modules.cache.redis_cache import set_json, get_json, delete
-from server.config import settings
+from sentinel_core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)

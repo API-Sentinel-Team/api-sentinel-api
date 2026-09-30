@@ -3,14 +3,13 @@ from fastapi import APIRouter, Depends, Body, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, delete, select, update
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
-from server.modules.scheduler.test_scheduler import ScheduleValidationError, TestScheduler
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.scheduler import schedule_store
+from sentinel_core.modules.scheduler.schedule_store import ScheduleValidationError
 from server.modules.validation.input_validator import InputValidator, ValidationError
-from server.models.core import TestSchedule
-from server.config import settings
+from sentinel_core.models.core import TestSchedule
 
 router = APIRouter()
-_scheduler = TestScheduler()
 
 
 @router.get("/")
@@ -72,13 +71,14 @@ async def create_schedule(
             if pentest_profile_id
             else None
         )
-        schedule_id = await _scheduler.schedule(
-            validated_name,
-            validated_cron,
-            validated_template_ids,
-            validated_endpoint_ids,
-            account_id,
+        # api-sentinel-scheduler picks up the persisted row on its next sync.
+        schedule_id = await schedule_store.create_schedule(
             db,
+            name=validated_name,
+            cron_expression=validated_cron,
+            template_ids=validated_template_ids,
+            endpoint_ids=validated_endpoint_ids,
+            account_id=account_id,
             pentest_profile_id=validated_pentest_profile_id,
         )
     except ValidationError as exc:
@@ -138,9 +138,7 @@ def _continuous_workflow_summary(
     pentest_profile_id: str | None = None,
 ) -> dict[str, object]:
     profile_id = pentest_profile_id if pentest_profile_id is not None else getattr(schedule, "pentest_profile_id", None)
-    execution_mode = (settings.PENTEST_SCAN_EXECUTION_MODE or "background").strip().lower()
-    if execution_mode not in {"background", "queued"}:
-        execution_mode = "background"
+    execution_mode = "queued"  # scheduled runs are always queued for the scan-worker
     return {
         "scheduled": True,
         "authenticated": bool(profile_id),

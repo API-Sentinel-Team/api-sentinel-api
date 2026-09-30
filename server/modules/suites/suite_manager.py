@@ -2,7 +2,7 @@
 Test suite manager — groups YAML templates into named suites.
 Mirrors Akto's default_test_suites collection.
 """
-from server.modules.test_executor.wordlist_manager import WordlistManager
+from sentinel_core.modules.test_executor.wordlist_manager import WordlistManager
 
 
 # OWASP API Security Top 10 (2023) mapping to our category codes

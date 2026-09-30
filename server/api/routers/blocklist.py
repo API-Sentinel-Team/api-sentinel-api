@@ -10,9 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import BlockedIP, ThreatActor
+from sentinel_core.models.core import BlockedIP, ThreatActor
 from server.modules.auth.rbac import RBAC, require_security_engineer
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 
 router = APIRouter()
 

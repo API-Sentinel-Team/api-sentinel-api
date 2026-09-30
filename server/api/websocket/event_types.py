@@ -1,18 +1,11 @@
 """
 WebSocket event types for the API Security Engine dashboard.
 Ensures consistency between Backend push and Frontend consumption.
+
+The enum lives in ``sentinel_core.modules.events`` so non-API services can publish the
+same event types; this alias keeps API-side imports stable.
 """
 
-from enum import Enum
+from sentinel_core.modules.events import EventType as WSEventType
 
-class WSEventType(str, Enum):
-    VULNERABILITY_FOUND = "VULNERABILITY_FOUND"
-    SCAN_STARTED = "SCAN_STARTED"
-    SCAN_COMPLETED = "SCAN_COMPLETED"
-    SCAN_PROGRESS = "SCAN_PROGRESS"
-    THREAT_ACTOR_FLAGGED = "THREAT_ACTOR_FLAGGED"
-    TRAFFIC_INGESTED = "TRAFFIC_INGESTED"
-    IP_BLOCKED = "IP_BLOCKED"
-    ENDPOINT_BLOCKED = "ENDPOINT_BLOCKED"
-    RATE_LIMITED = "RATE_LIMITED"
-    INCIDENT_CREATED = "INCIDENT_CREATED"
+__all__ = ["WSEventType"]

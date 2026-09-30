@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 
@@ -66,7 +66,7 @@ async def test_create_schedule_persists_auth_ready_safe_plan(client, db_session)
         "authenticated": True,
         "target_guard_enforced": True,
         "auth_scope_guard_enforced": True,
-        "execution_mode": "background",
+        "execution_mode": "queued",
     }
     assert "schedule-token" not in str(payload["continuous_workflow"])
     stored = await db_session.get(models.TestSchedule, payload["id"])
@@ -102,7 +102,7 @@ async def test_create_schedule_rejects_target_guard_blocked_plan_before_persist(
     await db_session.commit()
 
     monkeypatch.setattr(
-        "server.modules.scheduler.test_scheduler.blocked_endpoint_targets",
+        "sentinel_core.modules.scheduler.schedule_store.blocked_endpoint_targets",
         lambda _endpoints: [
             {
                 "endpoint_id": endpoint.id,

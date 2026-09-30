@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import Alert, AuditLog, ResponseActionLog
+from sentinel_core.models.core import Alert, AuditLog, ResponseActionLog
 from server.modules.detection.correlation_agent import correlation_agent
 from server.modules.detection.correlation_engine import correlate_threat
 from server.modules.detection.enforcement_agent import enforcement_agent

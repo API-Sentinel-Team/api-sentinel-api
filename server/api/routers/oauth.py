@@ -9,12 +9,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.models.core import OAuthProvider, User
+from sentinel_core.models.core import OAuthProvider, User
 from server.modules.auth.jwt_issuer import JWTIssuer
 from server.modules.auth.oauth_secrets import OAuthProviderSecretCodec
 from server.modules.auth.oauth_github import GitHubOAuth
 from server.modules.auth.rbac import require_admin
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 
 router = APIRouter(tags=["OAuth SSO"])
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def _get_redis():
     if _redis_client is not None:
         return _redis_client
     try:
-        from server.config import settings
+        from sentinel_core.config import settings
 
         if settings.REDIS_URL:
             import redis.asyncio as aioredis
@@ -66,7 +66,7 @@ async def _state_pop(state: str) -> Optional[int]:
 
 def _make_github_oauth(provider: OAuthProvider) -> GitHubOAuth:
     try:
-        from server.config import settings
+        from sentinel_core.config import settings
 
         base = settings.OAUTH_REDIRECT_BASE_URL
     except Exception:

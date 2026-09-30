@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from server.config import settings
-from server.models import core as models
+from sentinel_core.config import settings
+from sentinel_core.models import core as models
 from server.modules.detection.correlation_agent import correlation_agent
 from server.modules.detection.models import DetectionEnvelope, DetectionSignal
 from server.modules.detection.normalization_agent import normalization_agent

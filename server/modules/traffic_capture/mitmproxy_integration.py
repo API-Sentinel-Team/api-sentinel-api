@@ -10,10 +10,10 @@ import logging
 
 from mitmproxy import http
 
-from server.modules.persistence.database import AsyncSessionLocal
-from server.modules.traffic_capture.deduplication import RequestDeduplicator
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.modules.traffic_capture.deduplication import RequestDeduplicator
 from server.modules.traffic_capture.flow_processor import process_captured_flow
-from server.modules.traffic_capture.har_converter import HARConverter
+from sentinel_core.modules.traffic_capture.har_converter import HARConverter
 
 logger = logging.getLogger(__name__)
 

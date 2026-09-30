@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from server.models.core import APIWorkflow, Alert, ThreatActor, Vulnerability
+from sentinel_core.models.core import APIWorkflow, Alert, ThreatActor, Vulnerability
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

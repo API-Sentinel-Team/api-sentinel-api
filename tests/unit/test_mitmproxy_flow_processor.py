@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.sensors.keys import generate_sensor_key, hash_sensor_key
 from server.modules.traffic_capture.flow_processor import (
     _headers_dict,

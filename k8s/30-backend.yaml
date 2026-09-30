@@ -1,6 +1,6 @@
 # API Sentinel backend (FastAPI).
 # Image: harbor.wecrew.in/finspot/api-sentinel-backend:latest
-# Migrations: initContainer runs `alembic upgrade head` before the app starts.
+# Migrations: initContainer runs `sentinel-migrate upgrade head` before the app starts.
 # Pull secret: harbor-finspot-pull (finspot project is private).
 ---
 apiVersion: apps/v1
@@ -39,7 +39,7 @@ spec:
         - name: migrate
           image: harbor.wecrew.in/finspot/api-sentinel-backend:latest
           imagePullPolicy: Always
-          command: ["alembic", "upgrade", "head"]
+          command: ["sentinel-migrate", "upgrade", "head"]
           envFrom:
             - configMapRef:
                 name: api-sentinel-config

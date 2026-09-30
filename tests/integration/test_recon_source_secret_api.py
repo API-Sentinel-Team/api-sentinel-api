@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.auth.jwt_issuer import JWTIssuer
-from server.modules.recon.secrets import ReconSourceSecretCodec
+from sentinel_core.modules.recon.secrets import ReconSourceSecretCodec
 
 
 def _headers_for_role(role: str, account_id: int = 1000000) -> dict[str, str]:

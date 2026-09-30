@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy import select
 
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.auth.jwt_issuer import JWTIssuer
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.integrations.secrets import IntegrationSecretCodec
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.integrations.secrets import IntegrationSecretCodec
 
 
 def _headers_for_role(role: str, account_id: int = 1000000):
@@ -93,11 +93,11 @@ async def test_member_can_read_but_cannot_write_integration_configs(client, auth
 @pytest.mark.asyncio
 async def test_create_integration_blocks_unsafe_destination(client, auth_headers, monkeypatch):
     monkeypatch.setattr(
-        "server.modules.integrations.destination_guard.settings.DEBUG",
+        "sentinel_core.modules.integrations.destination_guard.settings.DEBUG",
         False,
     )
     monkeypatch.setattr(
-        "server.modules.integrations.destination_guard.settings.INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS",
+        "sentinel_core.modules.integrations.destination_guard.settings.INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS",
         False,
     )
 
@@ -124,11 +124,11 @@ async def test_test_integration_blocks_legacy_unsafe_destination(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "server.modules.integrations.destination_guard.settings.DEBUG",
+        "sentinel_core.modules.integrations.destination_guard.settings.DEBUG",
         False,
     )
     monkeypatch.setattr(
-        "server.modules.integrations.destination_guard.settings.INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS",
+        "sentinel_core.modules.integrations.destination_guard.settings.INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS",
         False,
     )
     called = {}
@@ -164,11 +164,11 @@ async def test_test_integration_blocks_legacy_unsafe_destination(
 @pytest.mark.asyncio
 async def test_dispatcher_skips_legacy_unsafe_destination(db_session, monkeypatch):
     monkeypatch.setattr(
-        "server.modules.integrations.destination_guard.settings.DEBUG",
+        "sentinel_core.modules.integrations.destination_guard.settings.DEBUG",
         False,
     )
     monkeypatch.setattr(
-        "server.modules.integrations.destination_guard.settings.INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS",
+        "sentinel_core.modules.integrations.destination_guard.settings.INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS",
         False,
     )
     called = {}
@@ -181,7 +181,7 @@ async def test_dispatcher_skips_legacy_unsafe_destination(db_session, monkeypatc
             called["sent"] = True
             return True
 
-    monkeypatch.setattr("server.modules.integrations.dispatcher.WebhookClient", FakeWebhookClient)
+    monkeypatch.setattr("sentinel_core.modules.integrations.dispatcher.WebhookClient", FakeWebhookClient)
     integration = models.Integration(
         account_id=1000999,
         type="webhook",
@@ -261,7 +261,7 @@ async def test_integration_dispatcher_uses_decrypted_config(db_session, monkeypa
             captured["severity"] = severity
             return True
 
-    monkeypatch.setattr("server.modules.integrations.dispatcher.SlackClient", FakeSlackClient)
+    monkeypatch.setattr("sentinel_core.modules.integrations.dispatcher.SlackClient", FakeSlackClient)
     integration = models.Integration(
         account_id=1000000,
         type="slack",

@@ -1,8 +1,8 @@
 from typing import Dict, Any, List, Optional
 from sqlalchemy.future import select
-from server.models.core import Vulnerability
-from server.modules.persistence.database import AsyncSessionLocal
-from server.modules.utils.redactor import Redactor
+from sentinel_core.models.core import Vulnerability
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.modules.utils.redactor import Redactor
 import logging
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ class TokenRevokedError(JWTError): pass
 
 logger = logging.getLogger(__name__)
 
-from server.config import settings
+from sentinel_core.config import settings
 SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = settings.JWT_ALGORITHM
 

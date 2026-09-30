@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from server.models.core import APIEndpoint, SampleData
+from sentinel_core.models.core import APIEndpoint, SampleData
 
 
 def _burp_xml() -> str:

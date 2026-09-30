@@ -1,30 +1,48 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, Body, HTTPException, Request
+from fastapi import APIRouter, Depends, Query, Body, HTTPException, Request
 import datetime
 from typing import Any
 from urllib.parse import urlsplit
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_, func
 import uuid
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.auth.rbac import Permission, RBAC
 from server.modules.validation.input_validator import InputValidator, ValidationError
-from server.models.core import APIEndpoint, Integration, OpenAPISpec, TestRun, Vulnerability
-import server.api.routers.tests as tests_router
+from sentinel_core.models.core import APIEndpoint, Integration, OpenAPISpec, TestAccount, TestRun, Vulnerability
 from server.api.rate_limiter import limiter
-from server.modules.auth.audit import log_action
-from server.modules.integrations.jira_client import JiraClient
-from server.modules.integrations.destination_guard import (
+from server.api.scan_guards import (
+    load_scan_profile_for_execution,
+    request_ip,
+    scan_execution_mode,
+    validate_scan_auth_scope,
+    validate_scan_budget,
+    validate_scan_endpoint_targets,
+)
+from sentinel_core.modules.auth.audit import log_action
+from sentinel_core.modules.integrations.jira_client import JiraClient
+from sentinel_core.modules.integrations.destination_guard import (
     IntegrationDestinationError,
     validate_integration_destination_config,
 )
-from server.modules.integrations.secrets import IntegrationSecretCodec
-from server.modules.pentest.auth_preflight import active_scan_auth_audit_context
-from server.modules.pentest.profiles import PentestProfile
-from server.modules.test_executor.scan_plan import finalize_scan_plan_hash
-from server.modules.test_executor.target_guard import endpoint_target_url
-from server.modules.utils.redactor import Redactor
-from server.modules.utils.finding_fingerprint import vulnerability_fingerprint
-from server.modules.vulnerability_detector.lifecycle import (
+from sentinel_core.modules.integrations.secrets import IntegrationSecretCodec
+from sentinel_core.modules.pentest.auth_preflight import active_scan_auth_audit_context
+from sentinel_core.modules.pentest.profiles import PentestProfile
+from sentinel_core.modules.identity.roles_context import RolesContextBuilder
+from sentinel_core.modules.test_executor.kill_switch import KILL_SWITCH_REASON, kill_switch_enabled
+from sentinel_core.modules.test_executor.scan_plan import finalize_scan_plan_hash, normalize_test_intensity
+from sentinel_core.modules.test_executor.scan_planning import (
+    account_has_openapi_spec,
+    audit_scan_event,
+    build_scan_plan_for_run,
+    endpoint_scan_plan_context,
+    engine_runtime_availability,
+    scan_plan_audit_summary,
+)
+from sentinel_core.modules.test_executor.target_guard import endpoint_target_url
+from sentinel_core.modules.test_executor.wordlist_manager import WordlistManager
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.finding_fingerprint import vulnerability_fingerprint
+from sentinel_core.modules.vulnerability_detector.lifecycle import (
     NON_EXECUTED_RETEST_OUTCOMES,
     VULNERABILITY_RETEST_TRIGGER_SOURCES,
     confirmation_result_from_evidence,
@@ -409,7 +427,7 @@ async def _external_engine_retest_scan_plan(
         ).scalar_one_or_none()
     external_engine_scope: dict[str, Any] = {"target_url": target_url}
     if spec_record is not None:
-        from server.modules.test_executor.scan_worker import worker_spec_digest
+        from sentinel_core.modules.test_executor.scan_queue import worker_spec_digest
 
         external_engine_scope["openapi_spec_id"] = str(spec_record.id)
         external_engine_scope["openapi_spec_sha256"] = worker_spec_digest(spec_record.spec_json)
@@ -459,7 +477,7 @@ async def _external_engine_retest_scan_plan(
                 "source_vulnerability_type": Redactor.redact_text(str(vulnerability.type or "")),
             }
         ],
-        "targets": [tests_router._endpoint_scan_plan_context(endpoint, account_id=account_id)],
+        "targets": [endpoint_scan_plan_context(endpoint, account_id=account_id)],
         "engine_plan": [
             plan_engine_entries["schemathesis"],
             plan_engine_entries["nuclei"],
@@ -478,7 +496,7 @@ def _authorization_replay_retest_scan_plan(
     roles_context: dict | None,
     test_intensity: str,
 ) -> dict[str, Any]:
-    endpoint_context = tests_router._endpoint_scan_plan_context(endpoint, account_id=account_id)
+    endpoint_context = endpoint_scan_plan_context(endpoint, account_id=account_id)
     evidence = vulnerability.evidence if isinstance(vulnerability.evidence, dict) else {}
     scan_plan = {
         "schema_version": "scan_plan.v1",
@@ -516,7 +534,7 @@ def _authorization_replay_retest_scan_plan(
             "source_issue_type": Redactor.redact_text(str(evidence.get("issue_type") or vulnerability.type or "")),
         },
     }
-    return tests_router.finalize_scan_plan_hash(Redactor.redact_scan_result(scan_plan))
+    return finalize_scan_plan_hash(Redactor.redact_scan_result(scan_plan))
 
 
 async def _prepare_vulnerability_retest_run(
@@ -528,7 +546,7 @@ async def _prepare_vulnerability_retest_run(
     user_id: str | None,
     pentest_profile_id: str | None,
     trigger_source: str,
-) -> tuple[dict, list[str], list[str], str | None]:
+) -> dict:
     retest_engine = _external_engine_of_vulnerability(vulnerability)
     external_engine_retest = retest_engine is not None
     if not external_engine_retest and (not vulnerability.template_id or not vulnerability.endpoint_id):
@@ -564,12 +582,12 @@ async def _prepare_vulnerability_retest_run(
     else:
         endpoint_id = InputValidator.validate_uuid(vulnerability.endpoint_id, "endpoint_id")
 
-    if tests_router.kill_switch_enabled():
-        raise HTTPException(status_code=503, detail=tests_router.KILL_SWITCH_REASON)
+    if kill_switch_enabled():
+        raise HTTPException(status_code=503, detail=KILL_SWITCH_REASON)
 
     template_ids = [template_id]
     endpoint_ids = [endpoint_id]
-    tests_router._validate_scan_budget(template_ids, endpoint_ids)
+    validate_scan_budget(template_ids, endpoint_ids)
 
     endpoint = (
         await db.execute(
@@ -588,7 +606,7 @@ async def _prepare_vulnerability_retest_run(
         )
 
     endpoints = [endpoint]
-    tests_router._validate_scan_endpoint_targets(endpoints)
+    validate_scan_endpoint_targets(endpoints)
     if authorization_replay_retest:
         pentest_profile = None
         auth_profile = None
@@ -599,7 +617,7 @@ async def _prepare_vulnerability_retest_run(
         # LIFE-1: external-engine retests run the producing engine on an isolated
         # worker against the finding's original target. The worker performs the
         # auth preflight; templates phase is skipped via the sentinel template id.
-        pentest_profile, auth_profile = await tests_router._load_scan_profile_for_execution(
+        pentest_profile, auth_profile = await load_scan_profile_for_execution(
             db,
             account_id=account_id,
             pentest_profile_id=pentest_profile_id,
@@ -608,20 +626,20 @@ async def _prepare_vulnerability_retest_run(
         execution_mode = "queued"
         effective_test_intensity = "safe"
     else:
-        pentest_profile, auth_profile = await tests_router._load_scan_profile_for_execution(
+        pentest_profile, auth_profile = await load_scan_profile_for_execution(
             db,
             account_id=account_id,
             pentest_profile_id=pentest_profile_id,
         )
-        tests_router._validate_scan_auth_scope(endpoints, auth_profile)
+        validate_scan_auth_scope(endpoints, auth_profile)
         effective_pentest_profile_id = pentest_profile.id if pentest_profile is not None else pentest_profile_id
-        execution_mode = tests_router._scan_execution_mode()
-        effective_test_intensity = tests_router.normalize_test_intensity(None, profile=pentest_profile)
+        execution_mode = scan_execution_mode()
+        effective_test_intensity = normalize_test_intensity(None, profile=pentest_profile)
     test_accounts_result = await db.execute(
-        select(tests_router.TestAccount).where(tests_router.TestAccount.account_id == account_id)
+        select(TestAccount).where(TestAccount.account_id == account_id)
     )
-    roles_context = tests_router.RolesContextBuilder().build(test_accounts_result.scalars().all())
-    has_openapi_spec = await tests_router._account_has_openapi_spec(db, account_id=account_id)
+    roles_context = RolesContextBuilder().build(test_accounts_result.scalars().all())
+    has_openapi_spec = await account_has_openapi_spec(db, account_id=account_id)
     if authorization_replay_retest:
         scan_plan = _authorization_replay_retest_scan_plan(
             vulnerability=vulnerability,
@@ -640,8 +658,8 @@ async def _prepare_vulnerability_retest_run(
             profile=pentest_profile,
         )
     else:
-        scan_plan = tests_router._build_scan_plan_for_run(
-            templates=tests_router.WordlistManager.get_instance().templates,
+        scan_plan = build_scan_plan_for_run(
+            templates=WordlistManager.get_instance().templates,
             template_ids=template_ids,
             endpoints=endpoints,
             account_id=account_id,
@@ -650,7 +668,7 @@ async def _prepare_vulnerability_retest_run(
             roles_context=roles_context,
             auth_profile=auth_profile,
             has_openapi_spec=has_openapi_spec,
-            engine_runtime_availability=tests_router._scan_engine_runtime_availability(),
+            engine_availability=engine_runtime_availability(),
         )
 
     run_id = str(uuid.uuid4())
@@ -679,16 +697,16 @@ async def _prepare_vulnerability_retest_run(
         "source_vulnerability_id": run.source_vulnerability_id,
         "execution_mode": execution_mode,
         "test_intensity": effective_test_intensity,
-        "scan_plan": tests_router._scan_plan_audit_summary(scan_plan),
+        "scan_plan": scan_plan_audit_summary(scan_plan),
     }
-    await tests_router._audit_scan_event(
+    await audit_scan_event(
         db,
         action="SCAN_RUN_QUEUED",
         account_id=account_id,
         run_id=run_id,
         user_id=user_id,
         details=scan_details,
-        ip_address=tests_router._request_ip(request),
+        ip_address=request_ip(request),
     )
     await log_action(
         db=db,
@@ -708,30 +726,25 @@ async def _prepare_vulnerability_retest_run(
             "source_vulnerability_id": run.source_vulnerability_id,
             "execution_mode": execution_mode,
             "test_intensity": effective_test_intensity,
-            "scan_plan": tests_router._scan_plan_audit_summary(scan_plan),
+            "scan_plan": scan_plan_audit_summary(scan_plan),
         },
-        ip_address=tests_router._request_ip(request),
+        ip_address=request_ip(request),
     )
 
-    return (
-        {
-            "status": "scan_started" if execution_mode == "background" else "scan_queued",
-            "run_id": run_id,
-            "vulnerability_id": vulnerability.id,
-            "template_id": template_id,
-            "original_template_id": vulnerability.template_id if authorization_replay_retest else None,
-            "endpoint_id": endpoint_id,
-            "pentest_profile_id": effective_pentest_profile_id,
-            "execution_mode": execution_mode,
-            "trigger_source": run.trigger_source,
-            "source_vulnerability_id": run.source_vulnerability_id,
-            "test_intensity": effective_test_intensity,
-            "scan_plan": scan_plan,
-        },
-        template_ids,
-        endpoint_ids,
-        effective_pentest_profile_id,
-    )
+    return {
+        "status": "scan_queued",
+        "run_id": run_id,
+        "vulnerability_id": vulnerability.id,
+        "template_id": template_id,
+        "original_template_id": vulnerability.template_id if authorization_replay_retest else None,
+        "endpoint_id": endpoint_id,
+        "pentest_profile_id": effective_pentest_profile_id,
+        "execution_mode": execution_mode,
+        "trigger_source": run.trigger_source,
+        "source_vulnerability_id": run.source_vulnerability_id,
+        "test_intensity": effective_test_intensity,
+        "scan_plan": scan_plan,
+    }
 
 
 async def _find_active_vulnerability_retest(
@@ -799,7 +812,7 @@ async def _record_retest_deduped(
             "existing_trigger_source": existing_run.trigger_source,
             "source_vulnerability_id": vulnerability.id,
         },
-        ip_address=tests_router._request_ip(request),
+        ip_address=request_ip(request),
     )
     return payload
 
@@ -832,7 +845,7 @@ async def _record_auto_retest_skipped(
         resource_type="vulnerability",
         resource_id=vulnerability.id,
         details=payload,
-        ip_address=tests_router._request_ip(request),
+        ip_address=request_ip(request),
     )
     return payload
 
@@ -867,28 +880,6 @@ def _suppressed_auto_retest_reason(vulnerability: Vulnerability) -> str | None:
         return "accepted_risk"
     return None
 
-
-def _schedule_retest_background_task(
-    *,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession,
-    retest: dict,
-    template_ids: list[str],
-    endpoint_ids: list[str],
-    account_id: int,
-    pentest_profile_id: str | None,
-) -> None:
-    if retest["execution_mode"] != "background":
-        return
-    background_tasks.add_task(
-        tests_router._run_security_tasks,
-        retest["run_id"],
-        template_ids,
-        endpoint_ids,
-        account_id,
-        pentest_profile_id,
-        db.bind,
-    )
 
 
 @router.get("/summary/by-severity")
@@ -1382,7 +1373,6 @@ async def link_vulnerability_ticket(
 async def sync_vulnerability_ticket(
     vuln_id: str,
     request: Request,
-    background_tasks: BackgroundTasks,
     ticket_url: str | None = Body(default=None, embed=True),
     external_key: str | None = Body(default=None, embed=True),
     external_status: str = Body(..., embed=True),
@@ -1466,9 +1456,6 @@ async def sync_vulnerability_ticket(
     sync_event["sla_escalation"] = vulnerability_sla_escalation(vulnerability, sla=sla_snapshot)
 
     retest = None
-    retest_template_ids: list[str] = []
-    retest_endpoint_ids: list[str] = []
-    retest_pentest_profile_id: str | None = None
     if reason == "ticket_resolved_requires_confirmatory_retest":
         existing_retest = await _find_active_vulnerability_retest(
             db,
@@ -1487,12 +1474,7 @@ async def sync_vulnerability_ticket(
             )
         else:
             try:
-                (
-                    retest,
-                    retest_template_ids,
-                    retest_endpoint_ids,
-                    retest_pentest_profile_id,
-                ) = await _prepare_vulnerability_retest_run(
+                retest = await _prepare_vulnerability_retest_run(
                     db=db,
                     account_id=account_id,
                     vulnerability=vulnerability,
@@ -1526,16 +1508,6 @@ async def sync_vulnerability_ticket(
             details=sync_event,
     )
     await db.commit()
-    if retest is not None and retest.get("status") != "not_queued":
-        _schedule_retest_background_task(
-            background_tasks=background_tasks,
-            db=db,
-            retest=retest,
-            template_ids=retest_template_ids,
-            endpoint_ids=retest_endpoint_ids,
-            account_id=account_id,
-            pentest_profile_id=retest_pentest_profile_id,
-        )
     await db.refresh(vulnerability)
     response = {
         "status": "synced",
@@ -1649,7 +1621,6 @@ async def create_vulnerability_ticket(
 async def queue_vulnerability_retest(
     vuln_id: str,
     request: Request,
-    background_tasks: BackgroundTasks,
     pentest_profile_id: str | None = Body(default=None, embed=True),
     payload: dict = Depends(RBAC.require_permission(Permission.VULNS_MANAGE)),
     db: AsyncSession = Depends(get_db),
@@ -1689,7 +1660,7 @@ async def queue_vulnerability_retest(
             )
             await db.commit()
             return retest
-        retest, template_ids, endpoint_ids, effective_pentest_profile_id = await _prepare_vulnerability_retest_run(
+        retest = await _prepare_vulnerability_retest_run(
             db=db,
             account_id=account_id,
             vulnerability=vulnerability,
@@ -1702,15 +1673,6 @@ async def queue_vulnerability_retest(
         raise HTTPException(status_code=400, detail=str(e))
 
     await db.commit()
-    _schedule_retest_background_task(
-        background_tasks=background_tasks,
-        db=db,
-        retest=retest,
-        template_ids=template_ids,
-        endpoint_ids=endpoint_ids,
-        account_id=account_id,
-        pentest_profile_id=effective_pentest_profile_id,
-    )
     return retest
 
 
@@ -1718,7 +1680,6 @@ async def queue_vulnerability_retest(
 async def record_vulnerability_remediation_event(
     vuln_id: str,
     request: Request,
-    background_tasks: BackgroundTasks,
     event_type: str = Body(..., embed=True),
     source: str = Body(default="api", embed=True),
     external_ref: str | None = Body(default=None, embed=True),
@@ -1747,9 +1708,6 @@ async def record_vulnerability_remediation_event(
         vulnerability.status = "IN_REMEDIATION"
 
     retest = None
-    retest_template_ids: list[str] = []
-    retest_endpoint_ids: list[str] = []
-    retest_pentest_profile_id: str | None = None
     if suppressed_reason is not None:
         retest = await _record_auto_retest_skipped(
             db=db,
@@ -1778,12 +1736,7 @@ async def record_vulnerability_remediation_event(
             )
         else:
             try:
-                (
-                    retest,
-                    retest_template_ids,
-                    retest_endpoint_ids,
-                    retest_pentest_profile_id,
-                ) = await _prepare_vulnerability_retest_run(
+                retest = await _prepare_vulnerability_retest_run(
                     db=db,
                     account_id=account_id,
                     vulnerability=vulnerability,
@@ -1819,21 +1772,11 @@ async def record_vulnerability_remediation_event(
         resource_type="vulnerability",
         resource_id=vulnerability.id,
         details=event_evidence,
-        ip_address=tests_router._request_ip(request),
+        ip_address=request_ip(request),
     )
     _append_remediation_event_evidence(vulnerability, event_evidence)
 
     await db.commit()
-    if retest is not None and retest.get("status") != "not_queued":
-        _schedule_retest_background_task(
-            background_tasks=background_tasks,
-            db=db,
-            retest=retest,
-            template_ids=retest_template_ids,
-            endpoint_ids=retest_endpoint_ids,
-            account_id=account_id,
-            pentest_profile_id=retest_pentest_profile_id,
-        )
     await db.refresh(vulnerability)
     return {
         "status": "success",
@@ -1847,7 +1790,6 @@ async def record_vulnerability_remediation_event(
 async def update_vulnerability_status(
     vuln_id: str,
     request: Request,
-    background_tasks: BackgroundTasks,
     status: str = Body(..., embed=True),
     pentest_profile_id: str | None = Body(default=None, embed=True),
     payload: dict = Depends(RBAC.require_permission(Permission.VULNS_MANAGE)),
@@ -1865,9 +1807,6 @@ async def update_vulnerability_status(
         _enforce_closure_gate(vulnerability)
     vulnerability.status = validated_status
     retest = None
-    retest_template_ids: list[str] = []
-    retest_endpoint_ids: list[str] = []
-    retest_pentest_profile_id: str | None = None
     await log_action(
         db=db,
         account_id=account_id,
@@ -1895,12 +1834,7 @@ async def update_vulnerability_status(
             )
         else:
             try:
-                (
-                    retest,
-                    retest_template_ids,
-                    retest_endpoint_ids,
-                    retest_pentest_profile_id,
-                ) = await _prepare_vulnerability_retest_run(
+                retest = await _prepare_vulnerability_retest_run(
                     db=db,
                     account_id=account_id,
                     vulnerability=vulnerability,
@@ -1919,16 +1853,6 @@ async def update_vulnerability_status(
                     reason=_retest_skip_reason(exc),
                 )
     await db.commit()
-    if retest is not None and retest.get("status") != "not_queued":
-        _schedule_retest_background_task(
-            background_tasks=background_tasks,
-            db=db,
-            retest=retest,
-            template_ids=retest_template_ids,
-            endpoint_ids=retest_endpoint_ids,
-            account_id=account_id,
-            pentest_profile_id=retest_pentest_profile_id,
-        )
     await db.refresh(vulnerability)
     response = {"status": "success", "vulnerability": _serialize_vulnerability(vulnerability)}
     if retest is not None:

@@ -6,8 +6,8 @@ import uuid
 
 import pytest
 
-from server.models.core import APIEndpoint
-from server.modules.api_inventory.endpoint_risk import (
+from sentinel_core.models.core import APIEndpoint
+from sentinel_core.modules.api_inventory.endpoint_risk import (
     confirmed_vuln_risk_floor,
     elevate_risk_score,
     endpoint_risk_multiplier,
@@ -107,7 +107,7 @@ async def test_endpoint_risk_multiplier_unknown_endpoint_is_neutral(db):
 @pytest.mark.asyncio
 async def test_confirmed_vuln_via_store_elevates_endpoint_risk(db):
     """End-to-end: persisting a vulnerability lifts its endpoint's risk_score."""
-    from server.modules.vulnerability_detector.store import create_or_merge_vulnerability
+    from sentinel_core.modules.vulnerability_detector.store import create_or_merge_vulnerability
 
     ep = _endpoint(1000000, risk=0.0)
     db.add(ep)
@@ -137,7 +137,7 @@ async def test_detection_amplifies_risk_on_proven_vulnerable_endpoint(db, monkey
     endpoint than on an untested one — Testing's knowledge reaches Detection."""
     # correlate_threat only computes real risk on the legacy path; in shadow/active
     # mode (the default) it delegates to the unified pipeline and returns risk 0.0.
-    from server.config import settings as app_settings
+    from sentinel_core.config import settings as app_settings
 
     monkeypatch.setattr(app_settings, "UNIFIED_PIPELINE_MODE", "off")
     from server.modules.detection.correlation_engine import correlate_threat

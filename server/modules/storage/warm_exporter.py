@@ -9,16 +9,16 @@ from typing import Dict, Optional, Tuple
 from sqlalchemy import select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.models.core import (
+from sentinel_core.config import settings
+from sentinel_core.models.core import (
     EndpointMetricHourly,
     ActorMetricHourly,
     AlertMetricDaily,
     WarmExportCursor,
 )
-from server.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
+from sentinel_core.modules.persistence.database import AsyncSessionLocal, apply_tenant_context
 from server.modules.storage.clickhouse_client import ClickHouseClient
-from server.modules.tenancy.context import set_current_account_id
+from sentinel_core.modules.tenancy.context import set_current_account_id
 
 logger = logging.getLogger(__name__)
 

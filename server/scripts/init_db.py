@@ -1,7 +1,7 @@
 import asyncio
-from server.modules.persistence.database import engine
-from server.models import Base
-import server.models.core # Ensure models are loaded
+from sentinel_core.modules.persistence.database import engine
+from sentinel_core.models import Base
+import sentinel_core.models.core # Ensure models are loaded
 
 async def init_db():
     print("Initializing SQLite database and creating tables...")

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import server.modules.ingestion.processors as processors
 import server.modules.ingestion.queue as queue_module
-from server.models import core as models
+from sentinel_core.models import core as models
 from server.modules.ingestion.dead_letter import redact_dead_letter_error, redact_dead_letter_payload
 from server.modules.ingestion.processors import process_event_batch
 from server.modules.ingestion.queue import IngestionJobItem, IngestionQueue

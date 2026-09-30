@@ -10,12 +10,12 @@ from typing import Dict, Any, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.config import settings
-from server.modules.persistence.database import AsyncSessionLocal
-from server.models.core import Alert, EvidenceRecord, EndpointMetricHourly, ActorMetricHourly
+from sentinel_core.config import settings
+from sentinel_core.modules.persistence.database import AsyncSessionLocal
+from sentinel_core.models.core import Alert, EvidenceRecord, EndpointMetricHourly, ActorMetricHourly
 from server.modules.evidence.package import save_evidence_package
-from server.modules.integrations.dispatcher import dispatch_event
-from server.modules.response.playbook_executor import execute_playbooks
+from sentinel_core.modules.integrations.dispatcher import dispatch_event
+from sentinel_core.modules.response.playbook_executor import execute_playbooks
 from server.modules.streaming.actor_baseline import upsert_actor_baseline
 from server.modules.streaming.event_bus import get_event_bus, tenant_topic
 from server.modules.streaming.schema_registry import get_registry

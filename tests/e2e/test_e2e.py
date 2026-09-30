@@ -3,7 +3,7 @@ import time
 import multiprocessing
 import uvicorn
 from httpx import AsyncClient
-from server.models import core as models
+from sentinel_core.models import core as models
 from tests.e2e.vulnerable_app import target
 
 def run_vulnerable_app():

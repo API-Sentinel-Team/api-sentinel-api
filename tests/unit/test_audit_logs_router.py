@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy import select
 
-from server.models.core import AuditLog
-from server.modules.auth.audit import log_action
+from sentinel_core.models.core import AuditLog
+from sentinel_core.modules.auth.audit import log_action
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

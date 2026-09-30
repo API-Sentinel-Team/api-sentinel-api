@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from server.models.core import AuthMechanism
+from sentinel_core.models.core import AuthMechanism
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

@@ -1,6 +1,6 @@
 import pytest
 
-from server.config import settings
+from sentinel_core.config import settings
 
 
 @pytest.mark.asyncio

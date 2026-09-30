@@ -5,8 +5,8 @@ import pytest
 from sqlalchemy import select
 
 import server.api.routers.source_code as source_code_router
-from server.models import core as models
-from server.modules.auth.encryption import Encryption
+from sentinel_core.models import core as models
+from sentinel_core.modules.auth.encryption import Encryption
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

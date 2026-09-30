@@ -5,15 +5,15 @@ import re
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from server.modules.persistence.database import get_read_db
-from server.models.core import (
+from sentinel_core.modules.persistence.database import get_read_db
+from sentinel_core.models.core import (
     Vulnerability, TestRun, APIEndpoint, RequestLog, WAFEvent, TestResult, PolicyViolation
 )
 from server.modules.auth.rbac import RBAC
 from server.modules.cache.redis_cache import get_cache_version, get_json, set_json
 from server.modules.pentest.north_star_readiness import build_north_star_readiness
-from server.modules.utils.redactor import Redactor
-from server.config import settings
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.config import settings
 
 router = APIRouter()
 _CLOSED_FINDING_STATUSES = {"CLOSED", "RESOLVED", "FALSE_POSITIVE", "ACCEPTED_RISK"}

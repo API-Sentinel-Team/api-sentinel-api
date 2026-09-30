@@ -5,16 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 
 from server.modules.auth.rbac import Permission, RBAC
-from server.modules.persistence.database import get_db
-from server.models.core import EndpointBlock, RateLimitOverride, ResponseActionLog
-from server.modules.enforcement.engine import (
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.models.core import EndpointBlock, RateLimitOverride, ResponseActionLog
+from sentinel_core.modules.enforcement.engine import (
     push_waf_rule,
     rate_limit_override,
     token_invalidate,
     circuit_breaker,
 )
 from server.modules.response.incident_orchestrator import handle_incident
-from server.modules.utils.redactor import Redactor
+from sentinel_core.modules.utils.redactor import Redactor
 from server.modules.validation.input_validator import InputValidator, ValidationError
 
 router = APIRouter(tags=["Enforcement"])

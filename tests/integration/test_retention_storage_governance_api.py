@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy import select
 
 from server.api.routers import storage as storage_router
-from server.config import settings
-from server.models.core import AuditLog, TenantRetentionPolicy
+from sentinel_core.config import settings
+from sentinel_core.models.core import AuditLog, TenantRetentionPolicy
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 

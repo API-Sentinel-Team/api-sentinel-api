@@ -1,61 +1,14 @@
-# Superpowers subagent-driven-development scratch workspace
-.superpowers/
-
-# Python
 __pycache__/
 *.py[cod]
-*.pyd
-*.pyo
 *.egg-info/
-.pytest_cache/
-.pytest-basetemp-*/
-.mypy_cache/
-.ruff_cache/
-.venv/
-.venv-test/
-venv/
-venv311/
-
-# Env files (keep example)
-.env
-.env.*
-!.env.example
-
-# Databases / archives / logs
-*.db
-*.db.bak
-*.db.backup
-*.db.backup-*
-*.log
-*.zip
-cookies.txt
-
-# Runtime data
-data/
-
-# Node / frontend
-node_modules/
-dist/
 build/
-coverage/
-playwright-report/
-test-results/
-api-sentinel-view-main/playwright-report/
-api-sentinel-view-main/test-results/
-
-# Tooling
-.claude/
-
-# Rust build artifacts
-target/
-**/target/
-
-# eBPF build artifacts
-sensor/ebpf/bpf/*.o
-sensor/ebpf/bpf/vmlinux.h
-
-# Local checkout of vediyappanm/API-Sensor (own git repo)
-/API-Sensor/
-
-# OS
-.DS_Store
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.env
+*.db
+data/
+models/

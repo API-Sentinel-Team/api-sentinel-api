@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.modules.auth.rbac import RBAC
 from server.modules.api_inventory.call_graph import api_lineage_graph
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 
 router = APIRouter(tags=["lineage"])
 

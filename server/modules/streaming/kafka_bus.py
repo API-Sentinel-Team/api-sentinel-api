@@ -15,7 +15,7 @@ except Exception:  # pragma: no cover - optional dependency
     AIOKafkaAdminClient = None
     NewTopic = None
 
-from server.config import settings
+from sentinel_core.config import settings
 
 logger = logging.getLogger(__name__)
 

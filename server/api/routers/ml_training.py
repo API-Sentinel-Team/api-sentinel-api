@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from server.modules.auth.rbac import RBAC
-from server.modules.persistence.database import get_db
+from sentinel_core.modules.persistence.database import get_db
 from server.modules.ml.training import train_isolation_forest
-from server.models.core import MLModelEvaluation, MLModel
+from sentinel_core.models.core import MLModelEvaluation, MLModel
 
 router = APIRouter(tags=["ML Training"])
 

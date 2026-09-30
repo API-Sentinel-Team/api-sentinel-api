@@ -11,9 +11,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
-from server.modules.persistence.database import get_db
-from server.modules.utils.redactor import Redactor
-from server.models.core import (
+from sentinel_core.modules.persistence.database import get_db
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.models.core import (
     User, AuditLog, WAFEvent, ThreatConfig,
     ThreatActor, MaliciousEvent, APICollection, APIEndpoint,
     Vulnerability, RequestLog, MaliciousEventRecord, Sensor, Account, AccountSetting, ApiToken,

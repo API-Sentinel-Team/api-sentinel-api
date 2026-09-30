@@ -5,14 +5,14 @@ from copy import deepcopy
 from types import SimpleNamespace
 from xml.etree import ElementTree as ET
 
-from server.modules.pentest.execution_artifacts import build_execution_artifact_payload
+from sentinel_core.modules.pentest.execution_artifacts import build_execution_artifact_payload
 from server.modules.test_executor.reporting import (
     build_junit,
     build_report_artifact_manifest,
     build_sarif,
 )
-from server.modules.test_executor.evidence import evidence_digest
-from server.models import core as models
+from sentinel_core.modules.test_executor.evidence import evidence_digest
+from sentinel_core.models import core as models
 
 
 def _hashed_evidence(**overrides):
@@ -39,7 +39,7 @@ def _canonical_sarif_payload(payload: dict) -> dict:
 
 
 def _refresh_artifact_hash(payload: dict) -> None:
-    from server.modules.pentest.execution_artifacts import (
+    from sentinel_core.modules.pentest.execution_artifacts import (
         _artifact_digest,
         verify_execution_artifact_payload,
     )

@@ -4,14 +4,14 @@ import hashlib
 from typing import Any, List
 from xml.etree.ElementTree import Element, SubElement, tostring
 
-from server.models.core import TestRun, TestResult
-from server.modules.pentest.engine_plan import ENGINE_EXECUTION_ORDER, engine_outcome_summaries
-from server.modules.pentest.execution_artifacts import (
+from sentinel_core.models.core import TestRun, TestResult
+from sentinel_core.modules.pentest.engine_plan import ENGINE_EXECUTION_ORDER, engine_outcome_summaries
+from sentinel_core.modules.pentest.execution_artifacts import (
     artifact_content_governance_summary,
     verify_execution_artifact_payload,
 )
-from server.modules.utils.redactor import Redactor
-from server.modules.vulnerability_detector.lifecycle import (
+from sentinel_core.modules.utils.redactor import Redactor
+from sentinel_core.modules.vulnerability_detector.lifecycle import (
     confirmation_status_from_evidence,
     verify_vulnerability_evidence,
 )
@@ -816,10 +816,15 @@ def _engine_accountability_manifest(
         for item in engine_plan
         if str(item.get("engine")) in ENGINE_EXECUTION_ORDER
     }
+    # authorization_replay is a ready engine but is accounted for by the vulnerabilities
+    # and retest outcome it produces, not by a hashed execution artifact, so it is
+    # excluded from execution-artifact accountability (it has no _ENGINE_EXECUTION_ARTIFACT_TYPES entry).
     ready_active_engines = [
         engine
         for engine in ENGINE_EXECUTION_ORDER
-        if engine != "passive" and entries.get(engine, {}).get("status") == "ready"
+        if engine != "passive"
+        and engine in _ENGINE_EXECUTION_ARTIFACT_TYPES
+        and entries.get(engine, {}).get("status") == "ready"
     ]
     blocked_engines = [
         engine
@@ -834,7 +839,8 @@ def _engine_accountability_manifest(
     continuous_engines = [
         engine
         for engine in ENGINE_EXECUTION_ORDER
-        if entries.get(engine, {}).get("status") in {"available", "continuous"}
+        if engine in _ENGINE_EXECUTION_ARTIFACT_TYPES
+        and entries.get(engine, {}).get("status") in {"available", "continuous"}
     ]
     artifact_index = _execution_artifact_index(execution_artifacts)
     expected_run_id = Redactor.redact_text(str(run.id or ""))

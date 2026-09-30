@@ -3,7 +3,7 @@ import datetime
 import pytest
 from sqlalchemy import select
 
-from server.models.core import APIEndpoint, EvidenceRecord, OpenAPISpec, PolicyViolation
+from sentinel_core.models.core import APIEndpoint, EvidenceRecord, OpenAPISpec, PolicyViolation
 from server.modules.auth.jwt_issuer import JWTIssuer
 
 
