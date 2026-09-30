@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install "sentinel-core @ git+https://github.com/API-Sentinel-Team/api-sentinel-core.git@${CORE_REF}"
-          pip install --no-deps "sentinel-worker @ git+https://github.com/API-Sentinel-Team/api-sentinel-scan-worker.git@${WORKER_REF}"
+          pip install --no-deps "git+https://github.com/API-Sentinel-Team/api-sentinel-scan-worker.git@${WORKER_REF}"
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Cross-service tests
         run: pytest tests/cross_service -q
