@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import select
 
 from sentinel_core.models import core as models
-from sentinel_core.modules.identity.authorization_replay import auth_headers_for_account
+from sentinel_core.modules.identity.replay_credentials import auth_headers_for_account
 from sentinel_core.modules.identity.test_account_secrets import TestAccountSecretCodec
 
 

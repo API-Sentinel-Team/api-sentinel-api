@@ -44,8 +44,8 @@ from server.modules.privacy.retention import get_retention_policy, apply_retenti
 from sentinel_core.modules.api_inventory.path_normalizer import PathNormalizer
 from server.modules.vulnerability_detector.pii_scanner import PIIScanner
 from server.modules.streaming.event_bus import get_event_bus, tenant_topic, track_topic
-from sentinel_core.modules.agentic.mcp_security import record_tool_invocation
-from sentinel_core.modules.agentic.mcp_parser import parse_mcp_invocation
+from server.modules.agentic.mcp_security import record_tool_invocation
+from server.modules.agentic.mcp_parser import parse_mcp_invocation
 from sentinel_core.modules.llm.findings import persist_llm_api_findings
 from sentinel_core.modules.passive.findings import persist_passive_attack_signal, persist_sensitive_data_exposure
 from sentinel_core.modules.vulnerability_detector.store import create_or_merge_vulnerability

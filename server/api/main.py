@@ -24,7 +24,7 @@ from server.modules.config.logging_config import configure_logging
 from server.modules.enforcement.adaptive_rate_limiter import AdaptiveRequestGuard
 from server.modules.ingestion.queue import ingestion_queue
 from sentinel_core.modules.persistence.database import AsyncSessionLocal, engine, get_db
-from sentinel_core.modules.response.default_playbooks import ensure_default_playbooks
+from server.modules.response.default_playbooks import ensure_default_playbooks
 from server.modules.storage.warm_exporter import WarmStoreExporter
 from server.modules.streaming.kafka_alert_consumer import KafkaAlertConsumer
 from server.modules.streaming.pipeline import StreamPipeline

@@ -15,7 +15,7 @@ from sqlalchemy.future import select
 
 from sentinel_core.models.core import APIEndpoint, SampleData, TestAccount, TestRun, Vulnerability
 from server.modules.auth.rbac import Permission, RBAC, can_run_tests
-from sentinel_core.modules.identity.authorization_replay import auth_headers_for_account
+from sentinel_core.modules.identity.replay_credentials import auth_headers_for_account
 from sentinel_core.modules.persistence.database import get_db
 from sentinel_core.modules.test_executor.kill_switch import (
     KILL_SWITCH_REASON,

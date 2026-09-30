@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from server.modules.auth.rbac import Permission, RBAC
 from sentinel_core.modules.persistence.database import get_db, get_read_db
-from sentinel_core.modules.agentic.mcp_security import record_tool_invocation
+from server.modules.agentic.mcp_security import record_tool_invocation
 from sentinel_core.models.core import AgentIdentity, MCPToolInvocation, AgenticViolation
 from sentinel_core.modules.utils.redactor import Redactor
 
