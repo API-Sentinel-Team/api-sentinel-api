@@ -1,0 +1,328 @@
+# Single-VPS production stack (4 vCPU / 8 GB). Run from this directory:
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+#
+# Images come from GHCR by tag. Fallback when GHCR is unavailable (sentinel-core is private, so a token is needed):
+#   export GH_TOKEN=...   # read access to api-sentinel-core; never commit it
+#   for r in api scan-worker scheduler archiver; do
+#     DOCKER_BUILDKIT=1 docker build --secret id=gh_token,env=GH_TOKEN \
+#       -t ghcr.io/api-sentinel-team/api-sentinel-$r:${SENTINEL_VERSION} ../../api-sentinel-$r
+#   done
+#   docker build -t ghcr.io/api-sentinel-team/api-sentinel-frontend:${SENTINEL_VERSION} ../../api-sentinel-frontend
+#
+# Networks: `edge` (egress, app tier), `scan` (egress, scan worker only), `data` (internal: no egress,
+# postgres/redis). Only caddy publishes ports (80/443).
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-hardening: &hardening
+  restart: unless-stopped
+  logging: *logging
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+
+# Everything sentinel_core.config validates when DEBUG=false (see server/config.py _validate_production_secrets).
+x-sentinel-env: &sentinel-env
+  DEBUG: "false"
+  APP_NAME: API Security Engine
+  DATABASE_URL: postgresql+asyncpg://sentinel:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/api_security
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+  API_KEY: ${API_KEY:?Set API_KEY}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY to a Fernet key}
+  SENSOR_KEY_HASH_PEPPER: ${SENSOR_KEY_HASH_PEPPER:?Set SENSOR_KEY_HASH_PEPPER}
+  CICD_GATE_SIGNING_SECRET: ${CICD_GATE_SIGNING_SECRET:?Set CICD_GATE_SIGNING_SECRET}
+  CORS_ORIGINS_OVERRIDE: https://${SENTINEL_DOMAIN:?Set SENTINEL_DOMAIN}
+  STARTUP_BOOTSTRAP_SCHEMA: "false"
+  STARTUP_ENABLE_DEMO_BOOTSTRAP: "false"
+  STARTUP_ENSURE_DEFAULT_PLAYBOOKS: "false"
+  TENANT_RLS_ENABLED: "true"
+  KAFKA_ENABLED: "false"
+  UNIFIED_PIPELINE_MODE: ${UNIFIED_PIPELINE_MODE:-shadow}
+  PENTEST_SCAN_EXECUTION_MODE: queued
+  PENTEST_ENFORCE_TARGET_GUARD: "true"
+  PENTEST_ALLOW_PRIVATE_TARGETS: "false"
+  PENTEST_RESOLVE_TARGET_HOSTS: "true"
+  PENTEST_FAIL_CLOSED_ON_TARGET_DNS_ERROR: "true"
+  PENTEST_REQUIRE_AUTH_PROFILE_FOR_ACTIVE_SCANS: "true"
+  PENTEST_TARGET_ALLOWLIST: ${PENTEST_TARGET_ALLOWLIST:?Set PENTEST_TARGET_ALLOWLIST (no wildcard)}
+  PENTEST_KILL_SWITCH_ENABLED: "false"
+  INTEGRATIONS_ENFORCE_DESTINATION_GUARD: "true"
+  INTEGRATIONS_ALLOW_PRIVATE_DESTINATIONS: "false"
+  SOURCE_CODE_ENFORCE_REPO_GUARD: "true"
+  SOURCE_CODE_ALLOW_PRIVATE_REPOS: "false"
+  SOURCE_CODE_ALLOW_LOCAL_PATHS: "false"
+
+# Shallow liveness for workers without an HTTP port: the DB must be reachable from the container.
+x-py-dbcheck: &py-dbcheck
+  test: ["CMD", "python", "-c", "import socket; socket.create_connection(('postgres', 5432), 3).close()"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:16-alpine
+    user: "70:70"
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: api_security
+    command:
+      - postgres
+      - -c
+      - shared_buffers=384MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - work_mem=8MB
+      - -c
+      - max_connections=100
+      - -c
+      - log_min_duration_statement=2000
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d api_security"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    mem_limit: 1280m
+    cpus: 1.0
+    shm_size: 256m
+    networks: [data]
+
+  redis:
+    <<: *hardening
+    image: redis:7-alpine
+    user: "999:1000"
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDISCLI_AUTH" --appendonly yes --maxmemory 192mb --maxmemory-policy noeviction --save 300 10
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 320m
+    cpus: 0.5
+    networks: [data]
+
+  # One-shot: applies migrations as the single schema owner, then exits 0.
+  migrate:
+    image: ghcr.io/api-sentinel-team/api-sentinel-api:${SENTINEL_VERSION:?Set SENTINEL_VERSION}
+    restart: "no"
+    logging: *logging
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment: *sentinel-env
+    command: ["sentinel-migrate", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 1.0
+    networks: [data]
+
+  api:
+    <<: *hardening
+    image: ghcr.io/api-sentinel-team/api-sentinel-api:${SENTINEL_VERSION}
+    environment:
+      <<: *sentinel-env
+      STARTUP_ENABLE_TEST_SCHEDULER: "false"
+      STARTUP_ENABLE_RECON_SCHEDULER: "false"
+      STARTUP_ENABLE_ANALYTICS_PROCESSOR: "false"
+      STARTUP_ENABLE_ARCHIVER: "false"
+      STREAM_ENGINE: IN_PROCESS
+      STREAM_PROCESSING_ENABLED: "true"
+      STARTUP_ENABLE_STREAM_PIPELINE: "true"
+      STARTUP_ENABLE_INGESTION_QUEUE: "true"
+      STARTUP_ENABLE_ENDPOINT_LIFECYCLE: "true"
+      STARTUP_REFRESH_TEMPLATE_LIBRARY: "true"
+      ML_TRAINING_ENABLED: "false"
+      INGEST_EXCLUDE_HOSTS: api-sentinel-backend,api-sentinel-frontend,${SENTINEL_DOMAIN}
+    tmpfs:
+      - /tmp
+      - /app/models:uid=10001,gid=10001
+    volumes:
+      - archive-data:/app/data/archives
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    mem_limit: 1536m
+    cpus: 1.5
+    networks:
+      edge:
+        aliases: [api-sentinel-backend]   # the frontend nginx upstream name
+      data:
+
+  scheduler:
+    <<: *hardening
+    image: ghcr.io/api-sentinel-team/api-sentinel-scheduler:${SENTINEL_VERSION}
+    environment:
+      <<: *sentinel-env
+      STARTUP_ENABLE_TEST_SCHEDULER: "true"
+      STARTUP_ENABLE_RECON_SCHEDULER: ${STARTUP_ENABLE_RECON_SCHEDULER:-true}
+      RECON_SCHEDULER_ENABLED: ${RECON_SCHEDULER_ENABLED:-true}
+      STARTUP_ENABLE_CONTINUOUS_TESTING: ${STARTUP_ENABLE_CONTINUOUS_TESTING:-false}
+      CONTINUOUS_TESTING_ENABLED: ${CONTINUOUS_TESTING_ENABLED:-false}
+      STARTUP_ENABLE_OPENAPI_DRIFT: ${STARTUP_ENABLE_OPENAPI_DRIFT:-false}
+      OPENAPI_DRIFT_ENABLED: ${OPENAPI_DRIFT_ENABLED:-false}
+      SCHEDULER_SYNC_INTERVAL_SECONDS: ${SCHEDULER_SYNC_INTERVAL_SECONDS:-30}
+    tmpfs:
+      - /tmp
+      - /app/models:uid=10001,gid=10001
+    healthcheck: *py-dbcheck
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.5
+    networks: [edge, data]
+
+  archiver:
+    <<: *hardening
+    image: ghcr.io/api-sentinel-team/api-sentinel-archiver:${SENTINEL_VERSION}
+    environment:
+      <<: *sentinel-env
+      ARCHIVE_ENABLED: "true"
+      STARTUP_ENABLE_ARCHIVER: "true"
+      ARCHIVE_INTERVAL_SECONDS: ${ARCHIVE_INTERVAL_SECONDS:-3600}
+      ARCHIVE_DIR: /app/data/archives
+      STARTUP_ARCHIVER_ACCOUNT_ID: ${STARTUP_ARCHIVER_ACCOUNT_ID:-0}
+    volumes:
+      - archive-data:/app/data/archives
+    tmpfs:
+      - /tmp
+      - /app/models:uid=10001,gid=10001
+    healthcheck: *py-dbcheck
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.5
+    networks: [edge, data]
+
+  # Heaviest service: Schemathesis / Nuclei / ZAP (JVM). Own egress network so it cannot reach the app tier.
+  worker:
+    <<: *hardening
+    image: ghcr.io/api-sentinel-team/api-sentinel-scan-worker:${SENTINEL_VERSION}
+    command: ["worker"]
+    environment:
+      <<: *sentinel-env
+      PENTEST_SCAN_WORKER_ISOLATION_MODE: leased_external_worker
+      PENTEST_SCAN_WORK_DIR: /tmp/api-sentinel-scan
+      PENTEST_SCAN_WORKER_ID: vps-scan-worker-1
+      API_SENTINEL_WORKER_ID: vps-scan-worker-1
+    volumes:
+      - scan-work:/tmp/api-sentinel-scan        # disk-backed: tmpfs would count against mem_limit
+    tmpfs:
+      - /tmp:size=256m,uid=1000,gid=1000,mode=1777
+      - /home/appuser:size=256m,uid=1000,gid=1000
+    healthcheck: *py-dbcheck
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    mem_limit: 2560m
+    cpus: 2.0
+    networks: [scan, data]
+
+  frontend:
+    <<: *hardening
+    image: ghcr.io/api-sentinel-team/api-sentinel-frontend:${SENTINEL_VERSION}
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [edge]
+
+  # Only published ports on the host. Automatic Let's Encrypt TLS for SENTINEL_DOMAIN.
+  caddy:
+    <<: *hardening
+    image: caddy:2-alpine
+    user: "10001:10001"
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0   # lets a non-root caddy bind 80/443 with all caps dropped
+    environment:
+      SENTINEL_DOMAIN: ${SENTINEL_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [edge]
+
+volumes:
+  postgres-data:
+  redis-data:
+  archive-data:
+  scan-work:
+  caddy-data:
+  caddy-config:
+
+networks:
+  edge:
+  scan:
+  data:
+    internal: true   # no route to the internet or the host: postgres/redis cannot be reached from outside
