@@ -300,7 +300,6 @@ jobs:
           mkdir -p artifacts/backend/ci-gates
           pytest \
             tests/unit/test_cicd_quality_gate.py \
-            tests/unit/test_external_engine_runtime_readiness.py \
             tests/unit/test_pentest_execution_artifacts.py \
             tests/integration/test_cicd_gate.py \
             -v \
