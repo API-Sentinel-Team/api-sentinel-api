@@ -1,0 +1,14 @@
+# Keeps every default gitleaks rule on. The allowlist below matches two exact, reviewed false
+# positives only; widening it needs a reviewer. Anything else the scanner finds fails CI.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Reviewed false positives (no real secrets): a Helm placeholder and a cache counter call"
+regexTarget = "line"
+regexes = [
+  # infra/helm/api-sentinel/values.yaml - documented placeholder that must be replaced at deploy time
+  '''^\s*jwtSecret:\s*"replace-me-with-64-char-secret"\s*$''',
+  # server/modules/cache/redis_cache.py - increments a cache version counter, not a credential
+  '''^\s*val = await incr\(key, ttl_seconds=60 \* 60 \* 24 \* 30\)\s*$''',
+]
