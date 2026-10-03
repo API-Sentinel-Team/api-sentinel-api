@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import datetime
-import gzip
 import json
+import os
 import re
 import uuid
+import zlib
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -248,19 +249,62 @@ async def ingest_lines(
     }
 
 
+# Request-size ceilings for sensor batches. A normal batch (200 events, bodies capped at 8 KiB by the
+# sensor) is a few MB at most. Both limits apply BEFORE anything is parsed.
+_MAX_INGEST_BODY_BYTES = int(os.environ.get("INGEST_MAX_BODY_BYTES", 8 * 1024 * 1024))
+_MAX_INGEST_DECOMPRESSED_BYTES = int(os.environ.get("INGEST_MAX_DECOMPRESSED_BYTES", 32 * 1024 * 1024))
+
+
+async def _read_capped_body(request: Request, limit: int) -> bytes:
+    """Read the request body, refusing it as soon as it exceeds `limit` (413)."""
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > limit:
+        raise HTTPException(status_code=413, detail="Request body too large")
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(status_code=413, detail="Request body too large")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _gunzip_capped(data: bytes, limit: int) -> bytes:
+    """Gunzip with a hard output ceiling, so a few KB of zeros cannot expand into gigabytes."""
+    decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    try:
+        out = decoder.decompress(data, limit + 1)
+    except zlib.error as exc:
+        raise HTTPException(status_code=400, detail="Invalid gzip body") from exc
+    if len(out) > limit or decoder.unconsumed_tail:
+        raise HTTPException(status_code=413, detail="Decompressed body too large")
+    return out
+
+
 async def handle_ebpf_ingest_request(request: Request, db: AsyncSession) -> dict:
     """
     Process JSON sensor payloads: {"version":"v1","events":[...]}.
     Auth: Authorization: Bearer <sensor_key>.
 
     Used by POST /api/stream/ingest/ebpf and POST /v1/events (Argus / api-sentinel-sensor).
+
+    Order matters: authenticate FIRST, then bound the size, then decompress and parse. Doing the
+    expensive work first let an unauthenticated caller spend CPU/memory (gzip bombs, huge JSON)
+    and learn that the endpoint exists via a 200 on an empty batch.
     """
-    raw = await request.body()
+    auth = request.headers.get("authorization", "")
+    sensor_key = auth.removeprefix("Bearer ").strip() if auth.lower().startswith("bearer ") else None
+    if not sensor_key:
+        raise HTTPException(status_code=403, detail="Sensor key required")
+
+    sensor = await resolve_sensor_by_key(db, sensor_key)
+    if not sensor:
+        raise HTTPException(status_code=403, detail="Invalid sensor key")
+
+    raw = await _read_capped_body(request, _MAX_INGEST_BODY_BYTES)
     if request.headers.get("content-encoding", "").lower() == "gzip":
-        try:
-            raw = gzip.decompress(raw)
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail="Invalid gzip body") from exc
+        raw = _gunzip_capped(raw, _MAX_INGEST_DECOMPRESSED_BYTES)
 
     try:
         data = json.loads(raw)
@@ -270,15 +314,6 @@ async def handle_ebpf_ingest_request(request: Request, db: AsyncSession) -> dict
     events = normalize_sensor_events(data)
     if not events:
         return {"status": "ok", "events_processed": 0, "threats_detected": 0}
-
-    auth = request.headers.get("authorization", "")
-    sensor_key = auth.removeprefix("Bearer ").strip() if auth.lower().startswith("bearer ") else None
-    if not sensor_key:
-        raise HTTPException(status_code=403, detail="Sensor key required")
-
-    sensor = await resolve_sensor_by_key(db, sensor_key)
-    if not sensor:
-        raise HTTPException(status_code=403, detail="Invalid sensor key")
 
     account_id = sensor.account_id
     sensor.last_heartbeat = _utc_now()

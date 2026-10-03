@@ -206,3 +206,81 @@ async def test_stream_recent_redacts_legacy_raw_query_values(client, db_session,
     assert row["path"] == "/legacy?token=****&session=****"
     assert "raw-legacy-token" not in str(body)
     assert "raw-session" not in str(body)
+
+
+# ---- /v1/events pre-authentication hardening ------------------------------------------------
+import gzip
+import zlib
+
+from server.api.routers import stream as stream_router
+
+
+async def _sensor(db_session, key="sensor-key-hardening-1"):
+    sensor = Sensor(id="sensor-hardening-1", account_id=2010, name="s", host="h", sensor_key=key)
+    db_session.add(sensor)
+    await db_session.commit()
+    return key
+
+
+@pytest.mark.asyncio
+async def test_v1_events_empty_batch_without_a_key_is_rejected_not_200(client):
+    # It used to return 200 {"events_processed": 0} to anyone, before any authentication.
+    response = await client.post("/v1/events", json={"version": "v1", "events": []})
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_a_gzip_bomb_without_a_key_is_never_decompressed(client, monkeypatch):
+    def boom(*_a, **_k):
+        raise AssertionError("an unauthenticated body must not be decompressed")
+
+    monkeypatch.setattr(stream_router.zlib, "decompressobj", boom)
+    bomb = gzip.compress(b"\0" * (100 * 1024 * 1024), compresslevel=9)
+    assert len(bomb) < 200_000  # ~100 MB of zeros in ~100 KB: the classic bomb
+    response = await client.post("/v1/events", content=bomb, headers={"content-encoding": "gzip"})
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_a_gzip_bomb_with_a_valid_key_is_cut_off_at_the_ceiling(client, db_session, monkeypatch):
+    key = await _sensor(db_session)
+    monkeypatch.setattr(stream_router, "_MAX_INGEST_DECOMPRESSED_BYTES", 1024 * 1024)
+    bomb = gzip.compress(b"\0" * (50 * 1024 * 1024), compresslevel=9)
+    response = await client.post(
+        "/v1/events",
+        content=bomb,
+        headers={"content-encoding": "gzip", "authorization": f"Bearer {key}"},
+    )
+    assert response.status_code == 413
+
+
+@pytest.mark.asyncio
+async def test_an_oversized_body_with_a_valid_key_is_refused_up_front(client, db_session, monkeypatch):
+    key = await _sensor(db_session)
+    monkeypatch.setattr(stream_router, "_MAX_INGEST_BODY_BYTES", 1000)
+    response = await client.post(
+        "/v1/events", content=b"x" * 5000, headers={"authorization": f"Bearer {key}", "content-type": "application/json"}
+    )
+    assert response.status_code == 413
+
+
+@pytest.mark.asyncio
+async def test_corrupt_gzip_with_a_valid_key_is_a_400_not_a_500(client, db_session):
+    key = await _sensor(db_session)
+    response = await client.post(
+        "/v1/events",
+        content=b"\x1f\x8b\x08\x00 definitely not gzip",
+        headers={"content-encoding": "gzip", "authorization": f"Bearer {key}"},
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_a_normal_gzipped_empty_batch_with_a_valid_key_still_works(client, db_session):
+    key = await _sensor(db_session)
+    payload = gzip.compress(b'{"version":"v1","events":[]}')
+    response = await client.post(
+        "/v1/events", content=payload, headers={"content-encoding": "gzip", "authorization": f"Bearer {key}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["events_processed"] == 0
