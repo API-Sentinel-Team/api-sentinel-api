@@ -46,9 +46,11 @@ c="$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$BASE/api/health/config-check"
 [[ "$c" == 401 ]] && ok "anonymous /api/health/config-check -> 401" || bad "anonymous /api/health/config-check -> $c (expected 401)"
 
 # 5. WebSocket upgrade reachable (101, or an app-level 400/401/403 without a token; 5xx/404 = proxy broken)
+# A fresh random 16-byte nonce per run (RFC 6455); no literal key in the repo for secret scanners to flag.
+ws_key="$(head -c 16 /dev/urandom | base64)"
 c="$("${CURL[@]}" -o /dev/null -w '%{http_code}' --max-time 5 \
   -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
-  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' "$BASE/api/stream/live" || true)"
+  -H "Sec-WebSocket-Key: $ws_key" "$BASE/api/stream/live" || true)"
 case "$c" in 101|400|401|403) ok "WebSocket /api/stream/live reachable ($c)";; *) bad "WebSocket /api/stream/live -> ${c:-no response}";; esac
 
 # 6. nothing but caddy publishes ports; host listens only on the expected ports
