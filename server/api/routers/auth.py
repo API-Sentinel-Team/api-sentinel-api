@@ -1,4 +1,5 @@
 """Authentication — signup, login, token refresh, current user, user management."""
+import os
 import secrets
 import string
 from fastapi import APIRouter, Depends, HTTPException, Body, Query, Response, Request
@@ -31,6 +32,14 @@ def _generate_temp_password(length: int = 16) -> str:
         if (any(c.isdigit() for c in pwd) and any(c.isalpha() for c in pwd)
                 and any(c in "!@#$%^&*" for c in pwd)):
             return pwd
+
+def _require_signup_enabled() -> None:
+    """Self-service signup creates a new tenant with an ADMIN user, so a production deployment that
+    should not accept strangers turns it off with SIGNUP_ENABLED=false. Read per request so it is a
+    deploy-time switch, not an import-time constant."""
+    if os.environ.get("SIGNUP_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}:
+        raise HTTPException(status_code=403, detail="Self-service signup is disabled")
+
 
 class SignupRequest(BaseModel):
     email: EmailStr
@@ -67,6 +76,7 @@ async def signup(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new user and a new account for multi-tenancy."""
+    _require_signup_enabled()
     try:
         # Validate account name
         validated_account_name = InputValidator.validate_string(
