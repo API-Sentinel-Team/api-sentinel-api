@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Settings every backend service validates at startup when DEBUG=false (sentinel_core.config refuses to
 # start without them). Shared so the services cannot drift apart.
 x-sentinel-required: &sentinel-required

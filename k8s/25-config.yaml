@@ -10,6 +10,8 @@ data:
   APP_NAME: "API Security Engine"
   VERSION: "1.0.0"
   DEBUG: "false"
+  # Invite-only / operator-controlled tenants: disable open self-signup on the live cluster.
+  SIGNUP_ENABLED: "false"
   TENANT_RLS_ENABLED: "true"
   # TESTS_LIBRARY_PATH is unset on purpose: the template library ships inside sentinel-core.
   CORS_ORIGINS_OVERRIDE: "https://sentinel.wecrew.in"
