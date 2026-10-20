@@ -1,3 +1,15 @@
+import atexit
+import os
+import shutil
+import tempfile
+
+# Settings read <SENTINEL_HOME or cwd>/.env at import time. Point SENTINEL_HOME at an empty
+# directory before anything imports sentinel_core, so a developer's compose .env (POSTGRES_PASSWORD,
+# real DATABASE_URL and secrets) never leaks into the suite. CI has no .env, so this matches CI.
+_SENTINEL_HOME = tempfile.mkdtemp(prefix="sentinel-test-home-")
+os.environ["SENTINEL_HOME"] = _SENTINEL_HOME
+atexit.register(shutil.rmtree, _SENTINEL_HOME, ignore_errors=True)
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
