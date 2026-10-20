@@ -51,8 +51,8 @@ Not verified by the split work: Docker image builds, hosted CI runs (each repo n
 
 | # | Item | Where | Owner | Sprint | Status |
 |---|------|-------|-------|--------|--------|
-| P0-1 | Activate `queued` execution mode in the real cluster (currently `background`) | `k8s/25-config.yaml` | Eng 4 | E4.4 | **BLOCKED (config queued; cluster activation/evidence required)** |
-| P0-2 | Deploy the scan worker (no `k8s/` manifest; Helm `scanWorker.enabled=false`, empty image) | `k8s/`, `infra/helm` | Eng 4 | E4.4 | **BLOCKED (manifest/prep complete; image/cluster deployment required)** |
+| P0-1 | Activate `queued` execution mode in the real cluster (currently `background`) | `k8s/25-config.yaml` | Eng 4 | E4.4 | **BLOCKED (local compose + code reject non-queued; k8s ConfigMap=`queued`; staging kubectl evidence still required)** |
+| P0-2 | Deploy the scan worker (no `k8s/` manifest; Helm `scanWorker.enabled=false`, empty image) | `k8s/`, `infra/helm` | Eng 4 | E4.4 | **BLOCKED (manifests + local `api-sentinel/scan-worker:local` running; Harbor digest pin + cluster apply still required)** |
 | P0-3 | Route direct Schemathesis/Nuclei/ZAP routes through the queue in `queued` mode; return a `run_id` | `server/api/routers/pentest.py` (`_enqueue_engine_run`) | Eng 1 | E1.3 | **DONE** |
 | P0-4 | Honor `CANCEL_REQUESTED` in the queued external phase (**decision C**) | `scan_worker.py` | Eng 1 | E1.2 | **DONE** |
 | P0-5 | `FAILED_WITH_FINDINGS` = success in phase rule + acceptance (**decision A**) | `engine_plan.py`, `scan_worker.py`, `worker_validation.py` | Eng 1 + 3 | E1.1 | **DONE** |
@@ -113,6 +113,7 @@ Not verified by the split work: Docker image builds, hosted CI runs (each repo n
 
 ## Change log
 
+- **2026-10-20** — Local Docker evidence (not staging): `PENTEST_SCAN_EXECUTION_MODE=queued` on API + worker poll loop (`compose-scan-worker-1`); `scan_execution_mode()` rejects non-`queued`; `SIGNUP_ENABLED=false` returns HTTP 403 on `/api/auth/signup`; logout revoke clears session; Postgres custom-format dump verified (~180KB via `app_user`). `split/api` pushed (compose + ConfigMap). Staging still blocked: kubectl context `docker-desktop` API refused; Harbor `401` without pull creds; branch protection API `404` (no admin/`main` rules visible to `vediyappanm`); GATE-1 / P0-6 / HARD-1/2/4 / ISO-2 / COV-3/4 remain evidence-gated.
 - **2026-09-24** — Tracker created. Decisions **A** and **C** implemented with tests;
   recorded in `SHARED_CONTRACTS.md`.
 - **2026-09-24** — **P0-3 done**: direct engine routes dispatch to the queue in

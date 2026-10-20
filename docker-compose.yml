@@ -41,6 +41,9 @@ services:
       STARTUP_ENABLE_ARCHIVER: "false"
       UNIFIED_PIPELINE_MODE: ${UNIFIED_PIPELINE_MODE:-shadow}
       KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+      SIGNUP_ENABLED: "false"
+      # Local default off; set TENANT_RLS_ENABLED=true once Postgres RLS policies are applied (k8s ConfigMap already true).
+      TENANT_RLS_ENABLED: ${TENANT_RLS_ENABLED:-false}
       PENTEST_SCAN_EXECUTION_MODE: queued
     networks:
       default:
