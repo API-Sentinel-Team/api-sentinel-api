@@ -113,7 +113,7 @@ Not verified by the split work: Docker image builds, hosted CI runs (each repo n
 
 ## Change log
 
-- **2026-10-20** — Local Docker evidence (not staging): `PENTEST_SCAN_EXECUTION_MODE=queued` on API + worker poll loop (`compose-scan-worker-1`); `scan_execution_mode()` rejects non-`queued`; `SIGNUP_ENABLED=false` returns HTTP 403 on `/api/auth/signup`; logout revoke clears session; Postgres custom-format dump verified (~180KB via `app_user`). `split/api` pushed (compose + ConfigMap). Staging still blocked: kubectl context `docker-desktop` API refused; Harbor `401` without pull creds; branch protection API `404` (no admin/`main` rules visible to `vediyappanm`); GATE-1 / P0-6 / HARD-1/2/4 / ISO-2 / COV-3/4 remain evidence-gated.
+- **2026-10-20** — Local Docker evidence (not staging): `PENTEST_SCAN_EXECUTION_MODE=queued` on API + worker poll loop (`compose-scan-worker-1`); `scan_execution_mode()` rejects non-`queued`; `SIGNUP_ENABLED=false` returns HTTP 403 on `/api/auth/signup`; logout revoke clears session; Postgres custom-format dump verified (~180KB via `app_user`). `split/api` pushed (compose + ConfigMap). GitHub `main` branch protection enabled (1 review, enforce admins, required checks: `backend-ci-gates`, `backend-unit`, `backend-integration`, `backend-security`, `dependency-secret-scan`). Staging still blocked: kubectl context `docker-desktop` API refused; Harbor needs auth to pin `:latest` digests and deploy worker; GATE-1 / P0-6 / HARD-1/2/4 / ISO-2 / COV-3/4 remain evidence-gated.
 - **2026-09-24** — Tracker created. Decisions **A** and **C** implemented with tests;
   recorded in `SHARED_CONTRACTS.md`.
 - **2026-09-24** — **P0-3 done**: direct engine routes dispatch to the queue in
